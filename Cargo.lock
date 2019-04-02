@@ -1,0 +1,11 @@
+[[package]]
+name = "rqr"
+version = "0.1.0"
+
+[[package]]
+name = "rqr-cli"
+version = "0.1.0"
+dependencies = [
+ "rqr 0.1.0",
+]
+

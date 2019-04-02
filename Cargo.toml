@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "rqr-cli",
+    "rqr",
+]

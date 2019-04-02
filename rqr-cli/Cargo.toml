@@ -1,0 +1,8 @@
+[package]
+name = "rqr-cli"
+version = "0.1.0"
+authors = ["Jonas Hietala <mail@jonashietala.se>"]
+edition = "2018"
+
+[dependencies]
+rqr = { path = "../rqr" }
