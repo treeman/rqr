@@ -1,11 +1,25 @@
+//use std::collections::HashSet;
+//use std::collections::HashMap;
+//use regex::Regex;
+
+pub mod mode;
+pub mod encoding;
+
+use mode::Mode;
+use encoding::{ECLevel, Version};
 
 pub fn qr(x: &str) {
+    println!("qr {}", x);
+
     // Data analysis to determine the most efficient mode
     //    numeric mode
     //    alphanumeric mode (no lowercase)
     //    UTF-8
     //    Kanji
     //
+    let mode = Mode::new(x);
+    println!("m: {:?}", mode);
+
     // Data Encoding
     // 1. Choose error correction level
     //    L     recovers 7% of data
@@ -15,6 +29,10 @@ pub fn qr(x: &str) {
     // 2. Determine smallest version of the data
     //    Called versions, 40 versions available
     //    See table for limits
+    let ecl = ECLevel::M;
+    let v = Version::minimal(&mode, &ecl);
+    println!("correction level: {:?} version: {:?}", ecl, v);
+
     // 3. Add mode indicator
     // 4. Add character count indicator
     // 5. Encode using selected mode
@@ -30,6 +48,18 @@ pub fn qr(x: &str) {
     //
     // Format & version information
 
-    println!("Got {}", x);
+    //println!("Got {}", x);
+    //println!("Got {:?}", Mode::Numeric);
+
+    //println!("chars:");
+    //for c in x.chars() {
+        //println!("{}", c);
+    //}
+
+    //println!("bytes:");
+    //for b in x.bytes() {
+        //println!("{}", b);
+    //}
+    //println!("{:?}", b"Hello");
 }
 
