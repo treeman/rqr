@@ -1,7 +1,7 @@
 use regex::Regex;
 
 /// Encoding modes.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Mode {
     Numeric(Vec<u8>), // 0..9
     Alphanumeric(Vec<u8>), // 0..9, A-Z and $%*+-./: and space
@@ -16,11 +16,24 @@ impl Mode {
         let alphanumeric = Regex::new(r"^[0-9A-Z$%*+-./: ]+$").unwrap();
 
         if numeric.is_match(s) {
-            Mode::Numeric(s.bytes().map(convert_numeric).collect())
+            Mode::Numeric(s.bytes()
+                           .map(convert_numeric)
+                           .collect())
         } else if alphanumeric.is_match(s) {
-            Mode::Alphanumeric(s.chars().map(convert_alphanumeric).collect())
+            Mode::Alphanumeric(s.chars()
+                                 .map(convert_alphanumeric)
+                                 .collect())
         } else {
-            Mode::Byte(s.bytes().collect())
+            Mode::Byte(s.bytes()
+                        .collect())
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            Mode::Numeric(v) => v.len(),
+            Mode::Alphanumeric(v) => v.len(),
+            Mode::Byte(v) => v.len(),
         }
     }
 }
@@ -78,6 +91,26 @@ fn convert_alphanumeric(c: char) -> u8 {
         '/' => 43,
         ':' => 44,
         _ => panic!("Unsupported alphanumeric '{}'", c),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mode_creation() {
+        assert_eq!(Mode::new("0123456789"),
+                   Mode::Numeric(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+        assert_eq!(Mode::new("ABCXYZ 0123456789$%*+-./:"),
+                   Mode::Alphanumeric(vec![10, 11, 12, 33, 34, 35, 36,
+                                           0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                                           37, 38, 39, 40, 41, 42, 43, 44]));
+        assert_eq!(Mode::new("abc"),
+                   Mode::Byte(vec![97, 98, 99]));
+        // No ECI support yet.
+        assert_eq!(Mode::new("☃"),
+                   Mode::Byte(vec![0b11100010, 0b10011000, 0b10000011]));
     }
 }
 
