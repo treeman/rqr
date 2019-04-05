@@ -1,6 +1,7 @@
 //mod mode;
 use crate::mode::Mode;
 use bitvec::*;
+use std::cmp;
 
 /// Error correction level
 #[derive(Debug)]
@@ -63,13 +64,10 @@ fn required_len(mode: &Mode, version: &Version) -> usize {
 
 fn bitvec_char_count(mode: &Mode, v: &Version) -> BitVec {
     let required = required_len(mode, v);
-    let len = mode.len();
+    let char_count = mode.len();
 
     let mut bv = BitVec::new();
-    bv.reserve(required);
-    for i in (0..required - 1).rev() {
-        bv.push(len & (1 << i) != 0);
-    }
+    append(&mut bv, char_count as u16, required);
     bv
 }
 
@@ -89,7 +87,7 @@ fn encode_numeric_data(v: &Vec<u8>) -> BitVec {
     // If the first number in the group is zero it should use 7 bits.
     // Otherwise it should use 10 bits.
     // It's the minimal amount of bits that can all numbers of that length.
-    let numeric_bit_len = |num: u16| {
+    let bit_len = |num: u16| {
         if num > 99 {
             10
         } else if num > 9 {
@@ -104,10 +102,8 @@ fn encode_numeric_data(v: &Vec<u8>) -> BitVec {
 
     let mut add = |s: &str| {
         let num: u16 = s.parse().unwrap();
-        let bit_len = numeric_bit_len(num);
-        for i in (0..bit_len).rev() {
-            bv.push(num & (1 << i) != 0);
-        }
+        let len = bit_len(num);
+        append(&mut bv, num, len);
     };
 
     let mut acc = String::new();
@@ -126,24 +122,68 @@ fn encode_numeric_data(v: &Vec<u8>) -> BitVec {
 }
 
 fn encode_alphanumeric_data(v: &Vec<u8>) -> BitVec {
-    // FIXME loop over each pair
-    //for x in v.iter() {
-        //let num: u16 = 
-    //}
-    //
-    //let mut it = v.iter();
-    ////while let 
-    //loop {
-        //if let Some(x) = 
-    //}
-    //for x in v.iter() {
-        ////let mut num: u16
-    //}
-    v[..].into() // FIXME
+    let mut bv = BitVec::new();
+    bv.reserve(v.len() * 8);
+
+    // Encoding is done by grouping into groups of two.
+    for i in (0..v.len()).step_by(2) {
+        if i + 1 < v.len() {
+            // If there are two numbers, offset the first with * 45
+            // as there are 45 possible characters, it fits into 11 bits.
+            let num = 45 * (v[i] as u16) + (v[i + 1] as u16);
+            append(&mut bv, num, 11);
+        } else {
+            // Otherwise 45 needs 6 bits.
+            let num = v[i] as u16;
+            append(&mut bv, num, 6);
+        }
+    }
+
+    bv
 }
 fn encode_byte_data(v: &Vec<u8>) -> BitVec {
     // It's already in ISO 8859-1, or UTF-8
     v[..].into()
+}
+
+fn append(bv: &mut BitVec, v: u16, len: usize) {
+    bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
+}
+
+fn encode(mode: &Mode, version: &Version) -> BitVec {
+    // FIXME find correct amount of required data
+    // Hardcode version 1 and Q level => 104 bits
+    let total_capacity = 104;
+
+    let mut bv = bitvec_mode(mode);
+    bv.reserve(total_capacity);
+    bv.append(&mut bitvec_char_count(mode, version));
+    bv.append(&mut bitvec_data(mode));
+
+    // Add up to 4 zero bits if we're below capacity.
+    assert!(bv.len() <= total_capacity);
+    let zero_bits = cmp::min(total_capacity - bv.len(), 4);
+    append(&mut bv, 0, zero_bits);
+
+    // If we're still below capacity add zero bits until we have full bytes.
+    assert!(bv.len() <= total_capacity);
+    let zero_bits = 8 - bv.len() % 8;
+    println!("bv.len {} zero_bits {}", bv.len(), zero_bits);
+    append(&mut bv, 0, zero_bits);
+    assert!(bv.len() % 8 == 0);
+
+    // Until we reach our capacity add pad bytes.
+    for pad in [0xEC, 0x11].iter().cycle() {
+        println!("pad {}", pad);
+        if bv.len() >= total_capacity {
+            break;
+        }
+        append(&mut bv, *pad, 8);
+    }
+
+    assert_eq!(bv.len(), total_capacity);
+
+    bv
 }
 
 
@@ -156,26 +196,33 @@ mod tests {
         let numeric = Mode::Numeric(vec![0, 1, 2]);
         let byte = Mode::Byte(vec![140, 141, 142]);
 
+        let hello_alpha = Mode::new("HELLO WORLD");
+
         assert_eq!(bitvec_mode(&numeric), bitvec![0, 0, 0, 1]);
 
         assert_eq!(required_len(&numeric, &Version(1)), 10);
         assert_eq!(required_len(&byte, &Version(40)), 16);
 
-        //// This is how we can build a bitvec
-        //let bv: BitVec = vec![3, 9].into();
-        //assert_eq!(bv.as_slice(), &[3, 9]);
-        //let src: &[u8] = &[3, 9, 14];
-        //let bv2: BitVec = src.into();
-        //println!("bv2: {}", bv2);
-        //assert_eq!(bv2.as_slice(), &[3, 9, 14]);
-
         assert_eq!(bitvec_char_count(&numeric, &Version(1)),
-                   bitvec![0, 0, 0, 0, 0, 0, 0, 1, 1]);
+                   bitvec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
+        assert_eq!(bitvec_char_count(&hello_alpha, &Version(1)),
+                   bitvec![0, 0, 0, 0, 0, 1, 0, 1, 1]);
 
         assert_eq!(encode_numeric_data(&vec![8, 6, 7, 5, 3, 0, 9]),
                    bitvec![1, 1, 0, 1, 1, 0, 0, 0, 1, 1, // 867
                            1, 0, 0, 0, 0, 1, 0, 0, 1, 0, // 530
                            1, 0, 0, 1]); // 9
+        assert_eq!(encode_alphanumeric_data(&vec![17, 14]),
+                   bitvec![0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1]);
+        assert_eq!(encode_alphanumeric_data(&vec![45]),
+                   bitvec![1, 0, 1, 1, 0, 1]);
+
+        let hello_res: BitVec = vec![0b00100000, 0b01011011, 0b00001011, 0b01111000,
+                                     0b11010001, 0b01110010, 0b11011100, 0b01001101,
+                                     0b01000011, 0b01000000,
+                                     0b11101100, 0b00010001, 0b11101100].into();
+        assert_eq!(encode(&hello_alpha, &Version(1)),
+                   hello_res);
     }
 }
 
