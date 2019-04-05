@@ -1,16 +1,9 @@
 //mod mode;
 use crate::mode::Mode;
+use crate::ec_encoding::ECLevel;
+use crate::block_info::*;
 use bitvec::*;
 use std::cmp;
-
-/// Error correction level
-#[derive(Debug)]
-pub enum ECLevel {
-    L, // Recovers 7% of data
-    M, // Recovers 15% of data
-    Q, // Recovers 25% of data
-    H, // Recovers 30% of data
-}
 
 
 /// QR code version, defines the size
@@ -23,9 +16,14 @@ impl Version {
         Version(v)
     }
 
+    // FIXME move out of impl?
     pub fn minimal(_mode: &Mode, _e: &ECLevel) -> Version {
         // TODO minimal version calculation
         Version(1)
+    }
+
+    pub fn index(&self) -> usize {
+        (self.0 - 1) as usize
     }
 }
 
@@ -150,10 +148,8 @@ fn append(bv: &mut BitVec, v: u16, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 
-fn encode(mode: &Mode, version: &Version, _ec: &ECLevel) -> BitVec {
-    // FIXME find correct amount of required data
-    // Hardcode version 1 and Q level => 104 bits
-    let total_capacity = 104;
+fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
+    let total_capacity = total_bits(version, ecl);
 
     let mut bv = bitvec_mode(mode);
     bv.reserve(total_capacity);

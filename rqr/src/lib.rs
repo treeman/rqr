@@ -2,10 +2,13 @@
 #![allow(dead_code)]
 
 pub mod mode;
-pub mod encoding;
+pub mod data_encoding;
+pub mod ec_encoding;
+mod block_info;
 
 use mode::Mode;
-use encoding::{ECLevel, Version};
+use data_encoding::Version;
+use ec_encoding::ECLevel;
 
 pub fn qr(x: &str) {
     println!("qr {}", x);
