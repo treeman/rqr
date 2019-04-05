@@ -5,6 +5,5 @@ Good tutorial:
 # TODO
 
 * Calculate the minimal applicable version
-* Find correct amount data capacity in encode() function
-  Now hardcoded to Version(1) + ECLevel::Q
+  Move it after encoding data? To avoid having to include a big table.
 

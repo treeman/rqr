@@ -35,7 +35,7 @@ fn bitvec_mode(mode: &Mode) -> BitVec {
     }
 }
 
-fn required_len(mode: &Mode, version: &Version) -> usize {
+fn char_count_len(mode: &Mode, version: &Version) -> usize {
     let v = version.0;
     if v <= 9 {
         match mode {
@@ -61,7 +61,7 @@ fn required_len(mode: &Mode, version: &Version) -> usize {
 }
 
 fn bitvec_char_count(mode: &Mode, v: &Version) -> BitVec {
-    let required = required_len(mode, v);
+    let required = char_count_len(mode, v);
     let char_count = mode.len();
 
     let mut bv = BitVec::new();
@@ -154,6 +154,7 @@ fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
     let mut bv = bitvec_mode(mode);
     bv.reserve(total_capacity);
     bv.append(&mut bitvec_char_count(mode, version));
+    // FIXME here we can decide on the minimal version?
     bv.append(&mut bitvec_data(mode));
     assert!(bv.len() <= total_capacity);
 
@@ -193,8 +194,8 @@ mod tests {
 
         assert_eq!(bitvec_mode(&numeric), bitvec![0, 0, 0, 1]);
 
-        assert_eq!(required_len(&numeric, &Version(1)), 10);
-        assert_eq!(required_len(&byte, &Version(40)), 16);
+        assert_eq!(char_count_len(&numeric, &Version(1)), 10);
+        assert_eq!(char_count_len(&byte, &Version(40)), 16);
 
         assert_eq!(bitvec_char_count(&numeric, &Version(1)),
                    bitvec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
