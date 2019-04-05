@@ -1,6 +1,5 @@
-//use std::collections::HashSet;
-//use std::collections::HashMap;
-//use regex::Regex;
+// Just during development phase
+#![allow(dead_code)]
 
 pub mod mode;
 pub mod encoding;
