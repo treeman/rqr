@@ -168,13 +168,11 @@ fn encode(mode: &Mode, version: &Version) -> BitVec {
     // If we're still below capacity add zero bits until we have full bytes.
     assert!(bv.len() <= total_capacity);
     let zero_bits = 8 - bv.len() % 8;
-    println!("bv.len {} zero_bits {}", bv.len(), zero_bits);
     append(&mut bv, 0, zero_bits);
     assert!(bv.len() % 8 == 0);
 
     // Until we reach our capacity add pad bytes.
     for pad in [0xEC, 0x11].iter().cycle() {
-        println!("pad {}", pad);
         if bv.len() >= total_capacity {
             break;
         }
@@ -220,6 +218,7 @@ mod tests {
         let hello_res: BitVec = vec![0b00100000, 0b01011011, 0b00001011, 0b01111000,
                                      0b11010001, 0b01110010, 0b11011100, 0b01001101,
                                      0b01000011, 0b01000000,
+                                     // Three padding bytes
                                      0b11101100, 0b00010001, 0b11101100].into();
         assert_eq!(encode(&hello_alpha, &Version(1)),
                    hello_res);
