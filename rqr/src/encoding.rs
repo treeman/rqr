@@ -150,7 +150,7 @@ fn append(bv: &mut BitVec, v: u16, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 
-fn encode(mode: &Mode, version: &Version) -> BitVec {
+fn encode(mode: &Mode, version: &Version, _ec: &ECLevel) -> BitVec {
     // FIXME find correct amount of required data
     // Hardcode version 1 and Q level => 104 bits
     let total_capacity = 104;
@@ -159,15 +159,15 @@ fn encode(mode: &Mode, version: &Version) -> BitVec {
     bv.reserve(total_capacity);
     bv.append(&mut bitvec_char_count(mode, version));
     bv.append(&mut bitvec_data(mode));
+    assert!(bv.len() <= total_capacity);
 
     // Add up to 4 zero bits if we're below capacity.
-    assert!(bv.len() <= total_capacity);
     let zero_bits = cmp::min(total_capacity - bv.len(), 4);
     append(&mut bv, 0, zero_bits);
+    assert!(bv.len() <= total_capacity);
 
     // If we're still below capacity add zero bits until we have full bytes.
-    assert!(bv.len() <= total_capacity);
-    let zero_bits = 8 - bv.len() % 8;
+    let zero_bits = (total_capacity - bv.len()) % 8;
     append(&mut bv, 0, zero_bits);
     assert!(bv.len() % 8 == 0);
 
@@ -178,7 +178,6 @@ fn encode(mode: &Mode, version: &Version) -> BitVec {
         }
         append(&mut bv, *pad, 8);
     }
-
     assert_eq!(bv.len(), total_capacity);
 
     bv
@@ -220,7 +219,7 @@ mod tests {
                                      0b01000011, 0b01000000,
                                      // Three padding bytes
                                      0b11101100, 0b00010001, 0b11101100].into();
-        assert_eq!(encode(&hello_alpha, &Version(1)),
+        assert_eq!(encode(&hello_alpha, &Version(1), &ECLevel::Q),
                    hello_res);
     }
 }
