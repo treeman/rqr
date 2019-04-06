@@ -2,7 +2,7 @@ use crate::mode::Mode;
 use crate::ec_encoding::ECLevel;
 
 /// QR code version, defines the size
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Version(usize);
 
 impl Version {

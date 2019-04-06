@@ -5,6 +5,7 @@ pub mod version;
 pub mod mode;
 pub mod data_encoding;
 pub mod ec_encoding;
+pub mod qr;
 mod block_info;
 
 use mode::Mode;
