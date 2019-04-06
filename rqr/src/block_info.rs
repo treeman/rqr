@@ -10,9 +10,21 @@ pub fn total_bits(v: &Version, ecl: &ECLevel) -> usize {
     8 * total_codewords(v, ecl)
 }
 
+/// Return a vector of codewords counts per block.
+/// The length specifies how many blocks there are and each element
+/// how the codewords of that block.
+pub fn group_block_count(v: &Version, ecl: &ECLevel) -> Vec<usize> {
+    let data = block_data(v, ecl);
+    let mut v = Vec::new();
+    v.extend((0..data.1).map(|_| data.2));
+    v.extend((0..data.3).map(|_| data.4));
+    v
+}
+
 fn block_data(v: &Version, ecl: &ECLevel) -> (usize, usize, usize, usize, usize) {
     BLOCK_INFO[v.index()][*ecl as usize]
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -22,12 +34,16 @@ mod tests {
     fn data() {
         assert_eq!(total_codewords(&Version::new(1), &ECLevel::Q), 13);
         assert_eq!(total_bits(&Version::new(1), &ECLevel::Q), 104);
+        assert_eq!(group_block_count(&Version::new(1), &ECLevel::Q),
+                   vec![13]);
+        assert_eq!(group_block_count(&Version::new(5), &ECLevel::Q),
+                   vec![15, 15, 16, 16]);
     }
 }
 
 
 // EC codewords and block information
-// Version x ECLevel gives a tuple with:
+// Version (1..40) x ECLevel (L, M, Q, H) gives a tuple with:
 // 0. EC codewords per block
 // 1. Num blocks in group  1
 // 2. Num codewords in each of group 1's block
