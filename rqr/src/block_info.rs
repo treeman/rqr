@@ -1,4 +1,4 @@
-use crate::data_encoding::Version;
+use crate::version::Version;
 use crate::ec_encoding::ECLevel;
 
 pub fn total_codewords(v: &Version, ecl: &ECLevel) -> usize {

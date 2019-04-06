@@ -1,31 +1,12 @@
 //mod mode;
 use crate::mode::Mode;
 use crate::ec_encoding::ECLevel;
+use crate::version::Version;
 use crate::block_info::*;
+
 use bitvec::*;
 use std::cmp;
 
-
-/// QR code version, defines the size
-#[derive(Debug)]
-pub struct Version(u8);
-
-impl Version {
-    pub fn new(v: u8) -> Version {
-        assert!(v >= 1 && v <= 40);
-        Version(v)
-    }
-
-    // FIXME move out of impl?
-    pub fn minimal(_mode: &Mode, _e: &ECLevel) -> Version {
-        // TODO minimal version calculation
-        Version(1)
-    }
-
-    pub fn index(&self) -> usize {
-        (self.0 - 1) as usize
-    }
-}
 
 fn bitvec_mode(mode: &Mode) -> BitVec {
     match mode {
@@ -36,7 +17,7 @@ fn bitvec_mode(mode: &Mode) -> BitVec {
 }
 
 fn char_count_len(mode: &Mode, version: &Version) -> usize {
-    let v = version.0;
+    let v = version.v();
     if v <= 9 {
         match mode {
             Mode::Numeric(_) => 10,
@@ -194,12 +175,12 @@ mod tests {
 
         assert_eq!(bitvec_mode(&numeric), bitvec![0, 0, 0, 1]);
 
-        assert_eq!(char_count_len(&numeric, &Version(1)), 10);
-        assert_eq!(char_count_len(&byte, &Version(40)), 16);
+        assert_eq!(char_count_len(&numeric, &Version::new(1)), 10);
+        assert_eq!(char_count_len(&byte, &Version::new(40)), 16);
 
-        assert_eq!(bitvec_char_count(&numeric, &Version(1)),
+        assert_eq!(bitvec_char_count(&numeric, &Version::new(1)),
                    bitvec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
-        assert_eq!(bitvec_char_count(&hello_alpha, &Version(1)),
+        assert_eq!(bitvec_char_count(&hello_alpha, &Version::new(1)),
                    bitvec![0, 0, 0, 0, 0, 1, 0, 1, 1]);
 
         assert_eq!(encode_numeric_data(&vec![8, 6, 7, 5, 3, 0, 9]),
@@ -216,7 +197,7 @@ mod tests {
                                      0b01000011, 0b01000000,
                                      // Three padding bytes
                                      0b11101100, 0b00010001, 0b11101100].into();
-        assert_eq!(encode(&hello_alpha, &Version(1), &ECLevel::Q),
+        assert_eq!(encode(&hello_alpha, &Version::new(1), &ECLevel::Q),
                    hello_res);
     }
 }

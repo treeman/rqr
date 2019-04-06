@@ -1,4 +1,4 @@
-use crate::data_encoding::Version;
+use crate::version::Version;
 use crate::block_info::*;
 use bitvec::*;
 

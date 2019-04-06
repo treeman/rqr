@@ -1,13 +1,14 @@
 // Just during development phase
 #![allow(dead_code)]
 
+pub mod version;
 pub mod mode;
 pub mod data_encoding;
 pub mod ec_encoding;
 mod block_info;
 
 use mode::Mode;
-use data_encoding::Version;
+use version::Version;
 use ec_encoding::ECLevel;
 
 pub fn qr(x: &str) {
