@@ -11,29 +11,7 @@ pub enum ECLevel {
     H, // Recovers 30% of data
 }
 
-fn group_into_blocks(bv: &BitVec, v: &Version, ecl: &ECLevel) -> Vec<Vec<u8>> {
-    let layout = group_block_count(v, ecl);
-    let data = bv.as_slice();
-    assert_eq!(data.len(), layout.iter().sum());
-
-    let mut res = Vec::with_capacity(layout.len());
-    let mut data_it = data.iter();
-    for block in layout.iter() {
-        let mut block_v:Vec<u8> = Vec::with_capacity(*block);
-        for _ in 0..*block {
-            block_v.push(*data_it.next().unwrap());
-        }
-        res.push(block_v);
-
-        // Maybe there's a more idiomatic way to populate res using the take() method on data_it,
-        // but I couldn't get past the borrow checker. I tried this:
-        //res.push(data_it.take(*block).map(|x| *x as u8).collect());
-    }
-    res
-}
-
-fn generate_ec_codewords(msg: &[u8], v: &Version, ecl: &ECLevel) -> Vec<u8> {
-    let ec_count = block_ec_count(v, ecl);
+fn generate_ec_codewords(msg: &[u8], ec_count: usize) -> Vec<u8> {
     let gen = GEN_POLYS[ec_count];
     assert_eq!(gen.len(), ec_count);
 
@@ -64,12 +42,96 @@ fn generate_ec_codewords(msg: &[u8], v: &Version, ecl: &ECLevel) -> Vec<u8> {
 }
 
 
+fn group_into_blocks(bv: &BitVec, layout: &Vec<usize>) -> Vec<Vec<u8>> {
+    let data = bv.as_slice();
+    assert_eq!(data.len(), layout.iter().sum());
+
+    let mut res = Vec::with_capacity(layout.len());
+    let mut data_it = data.iter();
+    for block in layout.iter() {
+        let mut block_v:Vec<u8> = Vec::with_capacity(*block);
+        for _ in 0..*block {
+            block_v.push(*data_it.next().unwrap());
+        }
+        res.push(block_v);
+
+        // Maybe there's a more idiomatic way to populate res using the take() method on data_it,
+        // but I couldn't get past the borrow checker. I tried this:
+        //res.push(data_it.take(*block).map(|x| *x as u8).collect());
+    }
+    res
+}
+
+fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
+    let layout = group_block_count(v, ecl);
+    assert_eq!(bv.len() / 8, layout.iter().sum());
+
+    let blocks = group_into_blocks(&bv, &layout);
+    let mut bytes: Vec<u8> = Vec::with_capacity(bv.len() / 8);
+
+    // First interleave all codewords in blocks.
+    let layout_max = layout.iter().max().unwrap();
+    for i in 0..*layout_max {
+        for block in blocks.iter() {
+            if i < block.len() {
+                bytes.push(block[i]);
+            }
+        }
+    }
+
+    // Then interleave all ec codewords in blocks.
+    let ec_count = block_ec_count(v, ecl);
+    let ec_blocks: Vec<Vec<u8>> = blocks.iter()
+        .map(|x| generate_ec_codewords(x.as_slice(), ec_count))
+        .collect();
+    for i in 0..ec_count {
+        for ec in ec_blocks.iter() {
+            bytes.push(ec[i]);
+        }
+    }
+
+    let mut res: BitVec = bytes.into();
+
+    // Add padding remainder bits.
+    let remainder = REMAINDER_BITS[v.index()];
+    res.resize(res.len() + remainder, false);
+    assert_eq!(res.len(), bv.len() + 8 * ec_count * layout.len() + remainder);
+
+    res
+}
+
+/// Helper method to crate a BitVec from a string with '0' and '1'.
+/// Discards any other characters, like newlines.
+fn bitvec_from_bin_str(s: &str) -> BitVec {
+    s.chars()
+     .filter(|x| *x == '1' || *x == '0')
+     .map(|x| x == '1')
+     .collect()
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn ec_tutorial_example() {
+        let ec_count = block_ec_count(&Version::new(1), &ECLevel::M);
+        assert_eq!(ec_count, 10);
+
+        let data: [u8; 16] = [0b00100000, 0b01011011, 0b00001011, 0b01111000, 0b11010001,
+                              0b01110010, 0b11011100, 0b01001101, 0b01000011, 0b01000000,
+                              0b11101100, 0b00010001, 0b11101100, 0b00010001, 0b11101100,
+                              0b00010001];
+        assert_eq!(generate_ec_codewords(&data, ec_count),
+                   vec![196, 35, 39, 119, 235, 215, 231, 226, 93, 23]);
+    }
+
+    #[test]
     fn group_tutorial_example() {
+        let layout = group_block_count(&Version::new(5), &ECLevel::Q);
+        assert_eq!(layout, vec![15, 15, 16, 16]);
+
         let bv: BitVec = vec![
             0b01000011, 0b01010101, 0b01000110, 0b10000110, 0b01010111, 0b00100110,
             0b01010101, 0b11000010, 0b01110111, 0b00110010, 0b00000110, 0b00010010,
@@ -98,20 +160,62 @@ mod tests {
                  0b00010001, 0b11101100, 0b00010001, 0b11101100, 0b00010001,
                  0b11101100]
         ];
-        assert_eq!(group_into_blocks(&bv, &Version::new(5), &ECLevel::Q),
+        assert_eq!(group_into_blocks(&bv, &layout),
                    expected);
     }
 
     #[test]
-    fn ec_tutorial_example() {
-        let data: [u8; 16] = [0b00100000, 0b01011011, 0b00001011, 0b01111000, 0b11010001,
-                              0b01110010, 0b11011100, 0b01001101, 0b01000011, 0b01000000,
-                              0b11101100, 0b00010001, 0b11101100, 0b00010001, 0b11101100,
-                              0b00010001];
-        assert_eq!(generate_ec_codewords(&data, &Version::new(1), &ECLevel::M),
-                   vec![196, 35, 39, 119, 235, 215, 231, 226, 93, 23]);
+    fn interleave_tutorial_example() {
+        let bv: BitVec = vec![
+            // group 1 block 1
+            0b01000011, 0b01010101, 0b01000110, 0b10000110, 0b01010111, 0b00100110,
+            0b01010101, 0b11000010, 0b01110111, 0b00110010, 0b00000110, 0b00010010,
+            0b00000110, 0b01100111, 0b00100110,
+            // group 1 block 2
+            0b11110110, 0b11110110, 0b01000010, 0b00000111, 0b01110110, 0b10000110,
+            0b11110010, 0b00000111, 0b00100110, 0b01010110, 0b00010110, 0b11000110,
+            0b11000111, 0b10010010, 0b00000110,
+            // group 2 block 1
+            0b10110110, 0b11100110, 0b11110111, 0b01110111, 0b00110010, 0b00000111,
+            0b01110110, 0b10000110, 0b01010111, 0b00100110, 0b01010010, 0b00000110,
+            0b10000110, 0b10010111, 0b00110010, 0b00000111,
+            // group 2 block 2
+            0b01000110, 0b11110111, 0b01110110, 0b01010110, 0b11000010, 0b00000110,
+            // Codeword #55 is 0b11100000 but converted to 16 dec in the tutorial.
+            // Using 16 as the representation works out in the end.
+            //                   -> 0b11100000
+            0b10010111, 0b00110010, 0b00010000, 0b11101100, 0b00010001, 0b11101100,
+            0b00010001, 0b11101100, 0b00010001, 0b11101100].into();
+        let expected = bitvec_from_bin_str(
+             "010000111111011010110110010001100101010111110110111001101111
+              011101000110010000101111011101110110100001100000011101110111
+              010101100101011101110110001100101100001000100110100001100000
+              011100000110010101011111001001110110100101111100001000000111
+              100001100011001001110111001001100101011100010000001100100101
+              011000100110111011000000011000010110010100100001000100010010
+              110001100000011011101100000001101100011110000110000100010110
+              011110010010100101111110110000100110000001100011001000010001
+              000001111110110011010101010101111001010011101011110001111100
+              110001110100100111110000101101100000101100010000010100101101
+              001111001101010010101101011100111100101001001100000110001111
+              011110110110100001011001001111110001011111000100101100111011
+              110111111001110111110010001000011110010111001000111011100110
+              101011111000100001100100110000101000100110100001101111000011
+              111111110111010110000001111001101010110010011010110100011011
+              110101010010011011110001000100001010000000100101011010100011
+              011011001000001110100001101000111111000000100000011011110111
+              10001100000010110010001001111000010110001101111011000000000");
+        assert_eq!(interleave_ec(bv, &Version::new(5), &ECLevel::Q).len(),
+                   expected.len());
     }
 }
+
+// How many additional remainder bits needs to be added
+// after interleaving blocks and ec codes?
+// Only depends on the version.
+static REMAINDER_BITS: [usize; 40] = [
+    0, 7, 7, 7, 7, 7, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3,
+    4, 4, 4, 4, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 0];
 
 
 // Encode 2^x in GF(256) arithmetic.
