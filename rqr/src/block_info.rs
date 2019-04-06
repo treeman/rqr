@@ -21,6 +21,11 @@ pub fn group_block_count(v: &Version, ecl: &ECLevel) -> Vec<usize> {
     v
 }
 
+/// Error correction codewords per block.
+pub fn block_ec_count(v: &Version, ecl: &ECLevel) -> usize {
+    block_data(v, ecl).0
+}
+
 fn block_data(v: &Version, ecl: &ECLevel) -> (usize, usize, usize, usize, usize) {
     BLOCK_INFO[v.index()][*ecl as usize]
 }
