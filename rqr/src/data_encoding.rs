@@ -129,7 +129,7 @@ fn append(bv: &mut BitVec, v: u16, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 
-fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
+pub fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
     let total_capacity = total_bits(version, ecl);
 
     let mut bv = bitvec_mode(mode);

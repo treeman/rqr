@@ -62,7 +62,7 @@ fn group_into_blocks(bv: &BitVec, layout: &Vec<usize>) -> Vec<Vec<u8>> {
     res
 }
 
-fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
+pub fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
     let layout = group_block_count(v, ecl);
     assert_eq!(bv.len() / 8, layout.iter().sum());
 
