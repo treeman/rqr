@@ -138,10 +138,6 @@ impl Qr {
         let data = data_encoding::encode(mode, v, ecl);
         let data = ec_encoding::interleave_ec(data, v, ecl);
 
-        //println!("size: {}", self.size);
-        //println!("data len: {}", data.len());
-        //println!("modules len: {}", self.modules.len());
-        //println!("functions len: {}", self.functions.len());
         let mut data_i = 0;
         for (x, y) in ZigZagIt::new(self.size) {
             let i = self.index(x, y);
@@ -266,7 +262,7 @@ impl Qr {
 // but it does not automatically skip function patterns.
 struct ZigZagIt {
     size: usize,
-    // Should we move horizintal next step?
+    // Should we move horizontal next step?
     horizontal_next: bool,
     // Are we moving upwards?
     upwards: bool,
@@ -328,6 +324,7 @@ impl ZigZagIt {
 
 impl Iterator for ZigZagIt {
     type Item = (usize, usize);
+
     fn next(&mut self) -> Option<Self::Item> {
         if !self.valid { return None; }
 

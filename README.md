@@ -8,6 +8,17 @@ Errors in the tutorial:
 
 # TODO
 
+* Masking
+* Add format & version info
+* Generate svg
+* Generate bitmap
+* Additional options
+  1. Specify chars in string output
+  2. Toggle quiet zone
+  3. Set module width
 * Calculate the minimal applicable version
   Move it after encoding data? To avoid having to include a big table.
+* Cleanup interface
+* Rename `ec_encoding.rs`, possibly `data_encoding` as well?
+* Add doc comments
 
