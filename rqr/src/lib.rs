@@ -1,12 +1,14 @@
 // Just during development phase
 #![allow(dead_code)]
 
-pub mod version;
-pub mod mode;
-pub mod data;
-pub mod ec;
-pub mod qr;
 mod block_info;
+mod builder;
+mod data;
+mod ec;
+mod mode;
+mod qr;
+mod render;
+mod version;
 
 //use mode::Mode;
 //use version::Version;
