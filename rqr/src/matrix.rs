@@ -5,7 +5,7 @@ pub struct Matrix {
     /// Size defines the width and height of the matrix.
     pub size: usize,
 
-    /// The modules, black is false.
+    /// The modules, dark is false.
     pub modules: BitVec,
 
     /// Functions, if set marks the bit as a function.
