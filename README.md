@@ -18,7 +18,5 @@ Errors in the tutorial:
   3. Set module width
 * Calculate the minimal applicable version
   Move it after encoding data? To avoid having to include a big table.
-* Cleanup interface
-* Rename `ec_encoding.rs`, possibly `data_encoding` as well?
 * Add doc comments
 
