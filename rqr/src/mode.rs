@@ -25,8 +25,17 @@ impl Mode {
         }
     }
 
+    /// BitVec representation.
+    pub fn to_bitvec(&self) -> BitVec {
+        match self {
+            Mode::Numeric => bitvec![0, 0, 0, 1],
+            Mode::Alphanumeric => bitvec![0, 0, 1, 0],
+            Mode::Byte => bitvec![0, 1, 0, 0],
+        }
+    }
+
     /// Convert string representation to bytes.
-    pub fn to_bytes(&self, s: &str) -> Vec<u8> {
+    pub fn string_to_bytes(&self, s: &str) -> Vec<u8> {
         match self {
             Mode::Numeric =>
                 s.bytes().map(convert_numeric).collect(),

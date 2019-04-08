@@ -45,14 +45,6 @@ pub fn encode_with(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) -> Bi
     bv
 }
 
-fn bitvec_mode(mode: &Mode) -> BitVec {
-    match mode {
-        Mode::Numeric => bitvec![0, 0, 0, 1],
-        Mode::Alphanumeric => bitvec![0, 0, 1, 0],
-        Mode::Byte => bitvec![0, 1, 0, 0],
-    }
-}
-
 fn char_count_len(mode: &Mode, version: &Version) -> usize {
     let v = version.v();
     if v >= 1 && v <= 9 {
