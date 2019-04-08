@@ -3,7 +3,7 @@
 
 pub mod version;
 pub mod mode;
-pub mod data_encoding;
+pub mod data;
 pub mod ec;
 pub mod qr;
 mod block_info;

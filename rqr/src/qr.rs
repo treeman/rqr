@@ -1,5 +1,5 @@
 use crate::version::Version;
-use crate::data_encoding;
+use crate::data;
 use crate::ec;
 use crate::ec::ECLevel;
 use bitvec::*;
@@ -32,7 +32,7 @@ impl Qr {
         res.add_timing_patterns();
         res.add_dark_module();
         res.add_reserved_areas();
-        res.add_data(s, v, ecl);
+        res.add_string(s, v, ecl);
 
         res
     }
@@ -129,22 +129,20 @@ impl Qr {
         }
     }
 
-    fn add_data(&mut self, s: &str, v: &Version, ecl: &ECLevel) {
-        // FIXME cleanup interface later.
-        let data = data_encoding::encode(s, v, ecl);
-        let data = ec::interleave_ec(data, v, ecl);
+    fn add_string(&mut self, s: &str, version: &Version, ecl: &ECLevel) {
+        let v = data::encode(s, version, ecl);
+        let v = ec::add(v, version, ecl);
 
-        let mut data_i = 0;
+        let mut v_i = 0;
         for (x, y) in ZigZagIt::new(self.size) {
             let i = self.index(x, y);
             if self.functions[i] { continue; }
 
-            self.modules.set(i, data[data_i]);
-            data_i += 1;
+            self.modules.set(i, v[v_i]);
+            v_i += 1;
         }
-        assert_eq!(data_i, data.len());
+        assert_eq!(v_i, v.len());
     }
-
 
     fn mark_fun_square(&mut self, x: usize, y: usize, w: usize) {
         self.mark_fun_rect(x, y, x + w - 1, y + w - 1);

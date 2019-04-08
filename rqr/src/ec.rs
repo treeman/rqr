@@ -11,12 +11,13 @@ pub enum ECLevel {
     H, // Recovers 30% of data
 }
 
-pub fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
+/// Add error correction codewords to data.
+pub fn add(data: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
     let layout = group_block_count(v, ecl);
-    assert_eq!(bv.len() / 8, layout.iter().sum());
+    assert_eq!(data.len() / 8, layout.iter().sum());
 
-    let blocks = group_into_blocks(&bv, &layout);
-    let mut bytes: Vec<u8> = Vec::with_capacity(bv.len() / 8);
+    let blocks = group_into_blocks(&data, &layout);
+    let mut bytes: Vec<u8> = Vec::with_capacity(data.len() / 8);
 
     // First interleave all codewords in blocks.
     let layout_max = layout.iter().max().unwrap();
@@ -44,7 +45,7 @@ pub fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
     // Add padding remainder bits.
     let remainder = REMAINDER_BITS[v.index()];
     res.resize(res.len() + remainder, false);
-    assert_eq!(res.len(), bv.len() + 8 * ec_count * layout.len() + remainder);
+    assert_eq!(res.len(), data.len() + 8 * ec_count * layout.len() + remainder);
 
     res
 }
@@ -205,7 +206,7 @@ mod tests {
               110101010010011011110001000100001010000000100101011010100011
               011011001000001110100001101000111111000000100000011011110111
               10001100000010110010001001111000010110001101111011000000000");
-        assert_eq!(interleave_ec(bv, &Version::new(5), &ECLevel::Q).len(),
+        assert_eq!(add(bv, &Version::new(5), &ECLevel::Q).len(),
                    expected.len());
     }
 }
