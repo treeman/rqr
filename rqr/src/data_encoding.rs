@@ -1,4 +1,3 @@
-//mod mode;
 use crate::mode::Mode;
 use crate::ec::ECLevel;
 use crate::version::Version;
@@ -7,20 +6,23 @@ use crate::block_info::*;
 use bitvec::*;
 use std::cmp;
 
+/// Encode string data to BitVec.
+/// Does not include error correction codes, it only encodes the data portion.
 pub fn encode(s: &str, version: &Version, ecl: &ECLevel) -> BitVec {
     let mode = Mode::from_str(s);
-    encode_with(s, &mode, version, ecl)
+    encode_with_mode(s, &mode, version, ecl)
 }
 
-pub fn encode_with(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
+/// Encode string data to BitVec in a specific mode.
+/// Does not include error correction codes, it only encodes the data portion.
+pub fn encode_with_mode(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
     let total_capacity = total_bits(version, ecl);
 
-    let v = mode.to_bytes(s); // FIXME cleanup
-    let mut bv = bitvec_mode(mode);
+    // Encoding is mode, char count, data.
+    let mut bv = mode.to_bitvec();
     bv.reserve(total_capacity);
-    bv.append(&mut bitvec_char_count(v.len(), mode, version));
-    // FIXME here we can decide on the minimal version?
-    bv.append(&mut bitvec_data(&v, mode));
+    bv.append(&mut bitvec_char_count(s.len(), mode, version));
+    bv.append(&mut bitvec_data(s, mode));
     assert!(bv.len() <= total_capacity);
 
     // Add up to 4 zero bits if we're below capacity.
@@ -45,44 +47,19 @@ pub fn encode_with(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) -> Bi
     bv
 }
 
-fn char_count_len(mode: &Mode, version: &Version) -> usize {
-    let v = version.v();
-    if v >= 1 && v <= 9 {
-        match mode {
-            Mode::Numeric => 10,
-            Mode::Alphanumeric => 9,
-            Mode::Byte => 8,
-        }
-    } else if v <= 26 {
-        match mode {
-            Mode::Numeric => 12,
-            Mode::Alphanumeric => 11,
-            Mode::Byte => 16,
-        }
-    } else if v <= 40 {
-        match mode {
-            Mode::Numeric => 14,
-            Mode::Alphanumeric => 13,
-            Mode::Byte => 16,
-        }
-    } else {
-        panic!("Malformed version {}", v);
-    }
-}
-
 fn bitvec_char_count(len: usize, mode: &Mode, v: &Version) -> BitVec {
-    let required = char_count_len(mode, v);
-
     let mut bv = BitVec::new();
-    append(&mut bv, len as u16, required);
+    append(&mut bv, len as u16, v.char_count_len(mode));
     bv
 }
 
-fn bitvec_data(v: &Vec<u8>, mode: &Mode) -> BitVec {
+fn bitvec_data(s: &str, mode: &Mode) -> BitVec {
+    let bytes = string_to_bytes(s, mode);
+
     match mode {
-        Mode::Numeric => encode_numeric_data(v),
-        Mode::Alphanumeric => encode_alphanumeric_data(v),
-        Mode::Byte => encode_byte_data(v),
+        Mode::Numeric => encode_numeric_data(&bytes),
+        Mode::Alphanumeric => encode_alphanumeric_data(&bytes),
+        Mode::Byte => encode_byte_data(&bytes),
     }
 }
 
@@ -135,7 +112,7 @@ fn encode_alphanumeric_data(v: &Vec<u8>) -> BitVec {
     // Encoding is done by grouping into groups of two.
     for i in (0..v.len()).step_by(2) {
         if i + 1 < v.len() {
-            // If there are two numbers, offset the first with * 45
+            // If there are two numbers, offset the first with * 46
             // as there are 45 possible characters, it fits into 11 bits.
             let num = 45 * (v[i] as u16) + (v[i + 1] as u16);
             append(&mut bv, num, 11);
@@ -157,6 +134,74 @@ fn append(bv: &mut BitVec, v: u16, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 
+// Converts string to byte representation.
+// Numeric and alphanumeric are compacted more.
+fn string_to_bytes(s: &str, mode: &Mode) -> Vec<u8> {
+    match mode {
+        Mode::Numeric =>
+            s.bytes().map(convert_numeric).collect(),
+        Mode::Alphanumeric =>
+            s.chars().map(convert_alphanumeric).collect(),
+        Mode::Byte =>
+            s.bytes().collect(),
+    }
+}
+
+fn convert_numeric(b: u8) -> u8 {
+    b - 48
+}
+
+fn convert_alphanumeric(c: char) -> u8 {
+    match c {
+        '0' => 0,
+        '1' => 1,
+        '2' => 2,
+        '3' => 3,
+        '4' => 4,
+        '5' => 5,
+        '6' => 6,
+        '7' => 7,
+        '8' => 8,
+        '9' => 9,
+        'A' => 10,
+        'B' => 11,
+        'C' => 12,
+        'D' => 13,
+        'E' => 14,
+        'F' => 15,
+        'G' => 16,
+        'H' => 17,
+        'I' => 18,
+        'J' => 19,
+        'K' => 20,
+        'L' => 21,
+        'M' => 22,
+        'N' => 23,
+        'O' => 24,
+        'P' => 25,
+        'Q' => 26,
+        'R' => 27,
+        'S' => 28,
+        'T' => 29,
+        'U' => 30,
+        'V' => 31,
+        'W' => 32,
+        'X' => 33,
+        'Y' => 34,
+        'Z' => 35,
+        ' ' => 36,
+        '$' => 37,
+        '%' => 38,
+        '*' => 39,
+        '+' => 40,
+        '-' => 41,
+        '.' => 42,
+        '/' => 43,
+        ':' => 44,
+        _ => panic!("Unsupported alphanumeric '{}'", c),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -174,11 +219,6 @@ mod tests {
 
     #[test]
     fn internal() {
-        assert_eq!(bitvec_mode(&Mode::Numeric), bitvec![0, 0, 0, 1]);
-
-        assert_eq!(char_count_len(&Mode::Numeric, &Version::new(1)), 10);
-        assert_eq!(char_count_len(&Mode::Byte, &Version::new(40)), 16);
-
         assert_eq!(bitvec_char_count(3, &Mode::Numeric, &Version::new(1)),
                    bitvec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
         assert_eq!(bitvec_char_count("HELLO WORLD".len(), &Mode::Alphanumeric, &Version::new(1)),
@@ -192,6 +232,15 @@ mod tests {
                    bitvec![0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1]);
         assert_eq!(encode_alphanumeric_data(&vec![45]),
                    bitvec![1, 0, 1, 1, 0, 1]);
+
+        assert_eq!(string_to_bytes("0123456789", &Mode::Numeric),
+                   vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        assert_eq!(string_to_bytes("ABCXYZ 0123456789$%*+-./:", &Mode::Alphanumeric),
+                   vec![10, 11, 12, 33, 34, 35, 36,
+                        0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                        37, 38, 39, 40, 41, 42, 43, 44]);
+        assert_eq!(string_to_bytes("☃", &Mode::Byte),
+                   vec![0b11100010, 0b10011000, 0b10000011]);
     }
 }
 

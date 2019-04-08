@@ -110,8 +110,7 @@ impl Qr {
     }
 
     fn add_dark_module(&mut self) {
-        let x = 8;
-        let y = 4 * self.version.v() + 9;
+        let (x, y) = self.version.dark_module_pos();
         self.set_fun(x, y);
     }
 
@@ -120,13 +119,11 @@ impl Qr {
 
         self.mark_fun_rect(0, 8, 8, 8);
         self.mark_fun_rect(8, 0, 8, 8);
-
         self.mark_fun_rect(size - 8, 8, size - 1, 8);
-
         self.mark_fun_rect(8, size - 8, 8, size - 1);
 
-        // Versions 7 and larger needs two areas for version information.
-        if self.version.v() >= 7 {
+        // Larger versions needs two areas for version information.
+        if self.version.extra_version_areas() {
             self.mark_fun_rect(0, size - 11, 6, size - 9);
             self.mark_fun_rect(size - 11, 0, size - 9, 6);
         }
@@ -134,7 +131,6 @@ impl Qr {
 
     fn add_data(&mut self, s: &str, v: &Version, ecl: &ECLevel) {
         // FIXME cleanup interface later.
-        //let data = data_encoding::encode(mode, v, ecl);
         let data = data_encoding::encode(s, v, ecl);
         let data = ec::interleave_ec(data, v, ecl);
 
