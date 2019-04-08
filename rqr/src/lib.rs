@@ -9,6 +9,7 @@ mod mode;
 mod qr;
 mod render;
 mod version;
+mod mask;
 
 //use mode::Mode;
 //use version::Version;

@@ -2,11 +2,12 @@ use crate::data;
 use crate::ec::ECLevel;
 use crate::ec;
 use crate::version::Version;
+use crate::render;
 
 use bitvec::*;
 
 // Builder for a QR code.
-struct QrBuilder {
+pub struct QrBuilder {
     version: Version,
     size: usize,
     // Zero is black.
@@ -16,7 +17,7 @@ struct QrBuilder {
 }
 
 impl QrBuilder {
-    fn new(v: &Version) -> QrBuilder {
+    pub fn new(v: &Version) -> QrBuilder {
         let size = v.size();
         QrBuilder {
             version: (*v).clone(),
@@ -26,7 +27,8 @@ impl QrBuilder {
         }
     }
 
-    fn build_until_masking(&mut self, s: &str, ecl: &ECLevel) {
+    // Build modules before masking (and format/version info) is applied.
+    pub fn build_until_masking(&mut self, s: &str, ecl: &ECLevel) {
         self.add_finders();
         self.add_alignments();
         self.add_timing_patterns();
@@ -197,6 +199,10 @@ impl QrBuilder {
     fn is_fun(&self, x: usize, y: usize) -> bool {
         let i = index(x, y, self.size);
         self.functions[i]
+    }
+
+    pub fn to_string(&self) -> String {
+        render::to_string(&self.modules, self.size)
     }
 
     fn dbg_print(&self) {
