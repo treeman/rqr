@@ -5,11 +5,12 @@ mod block_info;
 mod builder;
 mod data;
 mod ec;
+mod mask;
+mod matrix;
 mod mode;
 mod qr;
 mod render;
 mod version;
-mod mask;
 
 //use mode::Mode;
 //use version::Version;

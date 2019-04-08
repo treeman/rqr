@@ -1,29 +1,21 @@
 use crate::data;
 use crate::ec::ECLevel;
 use crate::ec;
-use crate::version::Version;
+use crate::matrix::Matrix;
 use crate::render;
+use crate::version::Version;
 
-use bitvec::*;
-
-// Builder for a QR code.
+/// Builder for a QR code.
 pub struct QrBuilder {
-    version: Version,
-    size: usize,
-    // Zero is black.
-    modules: BitVec,
-    // If set marks the bit as a function.
-    functions: BitVec,
+    pub version: Version,
+    pub matrix: Matrix,
 }
 
 impl QrBuilder {
     pub fn new(v: &Version) -> QrBuilder {
-        let size = v.size();
         QrBuilder {
             version: (*v).clone(),
-            size: size,
-            modules: bitvec![0; size * size],
-            functions: bitvec![0; size * size]
+            matrix: Matrix::new(v.size()),
         }
     }
 
@@ -38,7 +30,7 @@ impl QrBuilder {
     }
 
     fn add_finders(&mut self) {
-        let size = self.size;
+        let size = self.matrix.size;
 
         self.add_finder(0, 0);
         self.add_separator(0, 7, 7, 7);
@@ -56,15 +48,15 @@ impl QrBuilder {
 
     // x and y specifies the top left corner
     fn add_finder(&mut self, x: usize, y: usize) {
-        self.set_square_outline(x + 1, y + 1, 5);
-        self.mark_fun_square(x, y, 7);
+        self.matrix.set_square_outline(x + 1, y + 1, 5, true);
+        self.matrix.mark_fun_square(x, y, 7);
     }
 
     fn add_separator(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
         for a in x0..x1 + 1 {
             for b in y0..y1 + 1 {
-                self.set_fun(a, b);
-                self.set(a, b);
+                self.matrix.mark_fun(a, b);
+                self.matrix.set(a, b, true);
             }
         }
     }
@@ -82,15 +74,15 @@ impl QrBuilder {
     fn try_add_alignment(&mut self, cx: usize, cy: usize) {
         let x = cx - 2;
         let y = cy - 2;
-        if !self.any_fun_in_square(x, y, 5) {
-            self.set_square_outline(x + 1, y + 1, 3);
-            self.mark_fun_square(x, y, 5);
+        if !self.matrix.any_fun_in_square(x, y, 5) {
+            self.matrix.set_square_outline(x + 1, y + 1, 3, true);
+            self.matrix.mark_fun_square(x, y, 5);
         }
     }
 
     fn add_timing_patterns(&mut self) {
         let offset = 6;
-        for i in offset..self.size - offset {
+        for i in offset..self.matrix.size - offset {
             let v = i % 2 == 1;
             self.set_timing(i, offset, v);
             self.set_timing(offset, i, v);
@@ -99,33 +91,31 @@ impl QrBuilder {
 
     fn set_timing(&mut self, x: usize, y: usize, v: bool) {
         // Timing patterns should always overlap with finders and alignment modules.
-        if self.is_fun(x, y) {
-            assert_eq!(self.is_set(x, y), v, "timing overlap {},{}", x, y);
+        if self.matrix.is_fun(x, y) {
+            assert_eq!(self.matrix.is_set(x, y), v, "timing overlap {},{}", x, y);
         }
 
-        self.set_fun(x, y);
-        if v {
-            self.set(x, y);
-        }
+        self.matrix.mark_fun(x, y);
+        self.matrix.set(x, y, v);
     }
 
     fn add_dark_module(&mut self) {
         let (x, y) = self.version.dark_module_pos();
-        self.set_fun(x, y);
+        self.matrix.mark_fun(x, y);
     }
 
     fn add_reserved_areas(&mut self) {
-        let size = self.size;
+        let size = self.matrix.size;
 
-        self.mark_fun_rect(0, 8, 8, 8);
-        self.mark_fun_rect(8, 0, 8, 8);
-        self.mark_fun_rect(size - 8, 8, size - 1, 8);
-        self.mark_fun_rect(8, size - 8, 8, size - 1);
+        self.matrix.mark_fun_rect(0, 8, 8, 8);
+        self.matrix.mark_fun_rect(8, 0, 8, 8);
+        self.matrix.mark_fun_rect(size - 8, 8, size - 1, 8);
+        self.matrix.mark_fun_rect(8, size - 8, 8, size - 1);
 
         // Larger versions needs two areas for version information.
         if self.version.extra_version_areas() {
-            self.mark_fun_rect(0, size - 11, 6, size - 9);
-            self.mark_fun_rect(size - 11, 0, size - 9, 6);
+            self.matrix.mark_fun_rect(0, size - 11, 6, size - 9);
+            self.matrix.mark_fun_rect(size - 11, 0, size - 9, 6);
         }
     }
 
@@ -134,103 +124,17 @@ impl QrBuilder {
         let v = ec::add(v, &self.version, ecl);
 
         let mut v_i = 0;
-        for (x, y) in ZigZagIt::new(self.size) {
-            let i = index(x, y, self.size);
-            if self.functions[i] { continue; }
-
-            self.modules.set(i, v[v_i]);
+        for (x, y) in ZigZagIt::new(self.matrix.size) {
+            if self.matrix.is_fun(x, y) { continue; }
+            self.matrix.set(x, y, v[v_i]);
             v_i += 1;
         }
         assert_eq!(v_i, v.len());
     }
 
-    fn mark_fun_square(&mut self, x: usize, y: usize, w: usize) {
-        self.mark_fun_rect(x, y, x + w - 1, y + w - 1);
-    }
-
-    fn mark_fun_rect(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
-        for a in x0..x1 + 1 {
-            for b in y0..y1 + 1 {
-                self.set_fun(a, b);
-            }
-        }
-    }
-
-    // Return true if any module in a rect is marked as function
-    fn any_fun_in_square(&self, x: usize, y: usize, w: usize) -> bool {
-        for b in y..y + w {
-            for a in x..x + w {
-                if self.is_fun(a, b) {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    fn set_square_outline(&mut self, x: usize, y: usize, w: usize) {
-        // Above and below
-        for a in x..x + w {
-            self.set(a, y);
-            self.set(a, y + w - 1);
-        }
-        // Left and right
-        for b in y + 1..y + w - 1 {
-            self.set(x, b);
-            self.set(x + w - 1, b);
-        }
-    }
-
-    fn set(&mut self, x: usize, y: usize) {
-        let i = index(x, y, self.size);
-        self.modules.set(i, true);
-    }
-
-    fn set_fun(&mut self, x: usize, y: usize) {
-        let i = index(x, y, self.size);
-        self.functions.set(i, true);
-    }
-
-    fn is_set(&self, x: usize, y: usize) -> bool {
-        let i = index(x, y, self.size);
-        self.modules[i]
-    }
-
-    fn is_fun(&self, x: usize, y: usize) -> bool {
-        let i = index(x, y, self.size);
-        self.functions[i]
-    }
-
     pub fn to_string(&self) -> String {
-        render::to_string(&self.modules, self.size)
+        render::to_string(&self.matrix)
     }
-
-    fn dbg_print(&self) {
-        let size = self.version.size();
-
-        for y in 0..size {
-            let mut s = String::with_capacity(size + 1);
-            for x in 0..size {
-                s.push(self.to_dbg_char(x, y));
-            }
-            println!("{}", s);
-        }
-    }
-
-    fn to_dbg_char(&self, x: usize, y: usize) -> char {
-        if self.is_fun(x, y) {
-            if self.is_set(x, y) { '.' } else { '#' }
-        } else {
-            if self.is_set(x, y) { '1' } else { ' ' }
-        }
-    }
-}
-
-/// Convenience to map (x,y) coords to linear index.
-pub fn index(x: usize, y: usize, size: usize) -> usize {
-    assert!(x < size);
-    assert!(y < size);
-    size * y + x
 }
 
 // A zig-zagging iterator which moves according to the QR data specification.
@@ -273,12 +177,10 @@ impl ZigZagIt {
     }
 
     fn move_horizontally(&mut self) {
-        if self.x == 0 {
-            self.valid = false;
-        } else if self.x == 6 {
-            self.x -= 2;
-        } else {
-            self.x -= 1;
+        match self.x {
+            0 => self.valid = false,
+            6 => self.x -= 2,
+            _ => self.x -= 1,
         }
         self.horizontal_next = false;
     }
@@ -345,7 +247,7 @@ mod tests {
 #.....#.#..#.##.####.
 #######.##....#..#.##
 "; // Includes a newline at the end
-        assert_eq!(render::to_string(&builder.modules, builder.size), expected);
+        assert_eq!(builder.to_string(), expected);
     }
 }
 

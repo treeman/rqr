@@ -1,13 +1,11 @@
-use crate::builder;
+use crate::matrix::Matrix;
 
-use bitvec::*;
-
-pub fn to_string(modules: &BitVec, size: usize) -> String {
-    let mut res = String::with_capacity(size * size);
-    for y in 0..size {
-        let mut s = String::with_capacity(size + 1);
-        for x in 0..size {
-            let c = if modules[builder::index(x, y, size)] {
+pub fn to_string(matrix: &Matrix) -> String {
+    let mut res = String::with_capacity(matrix.size * matrix.size);
+    for y in 0..matrix.size {
+        let mut s = String::with_capacity(matrix.size + 1);
+        for x in 0..matrix.size {
+            let c = if matrix.is_set(x, y) {
                 '.'
             } else {
                 '#'
@@ -19,6 +17,26 @@ pub fn to_string(modules: &BitVec, size: usize) -> String {
     }
     res
 }
+
+//pub fn dbg_print(&self) {
+    //let size = self.version.size();
+
+    //for y in 0..size {
+        //let mut s = String::with_capacity(size + 1);
+        //for x in 0..size {
+            //s.push(self.to_dbg_char(x, y));
+        //}
+        //println!("{}", s);
+    //}
+//}
+
+//pub fn to_dbg_char(&self, x: usize, y: usize) -> char {
+    //if self.is_fun(x, y) {
+        //if self.is_set(x, y) { '.' } else { '#' }
+    //} else {
+        //if self.is_set(x, y) { '1' } else { ' ' }
+    //}
+//}
 
 //fn to_char(&self, x: usize, y: usize) -> char {
     //if self.is_set(x, y) { '.' } else { '#' }
