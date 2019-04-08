@@ -1,5 +1,4 @@
 use crate::version::Version;
-use crate::mode::Mode;
 use crate::data_encoding;
 use crate::ec;
 use crate::ec::ECLevel;
@@ -18,7 +17,7 @@ pub struct Qr {
 }
 
 impl Qr {
-    pub fn new(mode: &Mode, v: &Version, ecl: &ECLevel) -> Qr {
+    pub fn new(s: &str, v: &Version, ecl: &ECLevel) -> Qr {
         let size = v.size();
 
         let mut res = Self {
@@ -33,7 +32,7 @@ impl Qr {
         res.add_timing_patterns();
         res.add_dark_module();
         res.add_reserved_areas();
-        res.add_data(mode, v, ecl);
+        res.add_data(s, v, ecl);
 
         res
     }
@@ -133,9 +132,10 @@ impl Qr {
         }
     }
 
-    fn add_data(&mut self, mode: &Mode, v: &Version, ecl: &ECLevel) {
+    fn add_data(&mut self, s: &str, v: &Version, ecl: &ECLevel) {
         // FIXME cleanup interface later.
-        let data = data_encoding::encode(mode, v, ecl);
+        //let data = data_encoding::encode(mode, v, ecl);
+        let data = data_encoding::encode(s, v, ecl);
         let data = ec::interleave_ec(data, v, ecl);
 
         let mut data_i = 0;
@@ -340,8 +340,7 @@ mod tests {
 
     #[test]
     fn placement() {
-        let mode = Mode::new("HELLO WORLD");
-        let qr = Qr::new(&mode, &Version::new(1), &ECLevel::Q);
+        let qr = Qr::new("HELLO WORLD", &Version::new(1), &ECLevel::Q);
         let expected =
 "#######.#..#..#######
 #.....#.#.###.#.....#

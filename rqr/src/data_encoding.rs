@@ -7,14 +7,20 @@ use crate::block_info::*;
 use bitvec::*;
 use std::cmp;
 
-pub fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
+pub fn encode(s: &str, version: &Version, ecl: &ECLevel) -> BitVec {
+    let mode = Mode::from_str(s);
+    encode_with(s, &mode, version, ecl)
+}
+
+pub fn encode_with(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
     let total_capacity = total_bits(version, ecl);
 
+    let v = mode.to_bytes(s); // FIXME cleanup
     let mut bv = bitvec_mode(mode);
     bv.reserve(total_capacity);
-    bv.append(&mut bitvec_char_count(mode, version));
+    bv.append(&mut bitvec_char_count(v.len(), mode, version));
     // FIXME here we can decide on the minimal version?
-    bv.append(&mut bitvec_data(mode));
+    bv.append(&mut bitvec_data(&v, mode));
     assert!(bv.len() <= total_capacity);
 
     // Add up to 4 zero bits if we're below capacity.
@@ -41,51 +47,50 @@ pub fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
 
 fn bitvec_mode(mode: &Mode) -> BitVec {
     match mode {
-        Mode::Numeric(_) => bitvec![0, 0, 0, 1],
-        Mode::Alphanumeric(_) => bitvec![0, 0, 1, 0],
-        Mode::Byte(_) => bitvec![0, 1, 0, 0],
+        Mode::Numeric => bitvec![0, 0, 0, 1],
+        Mode::Alphanumeric => bitvec![0, 0, 1, 0],
+        Mode::Byte => bitvec![0, 1, 0, 0],
     }
 }
 
 fn char_count_len(mode: &Mode, version: &Version) -> usize {
     let v = version.v();
-    if v <= 9 {
+    if v >= 1 && v <= 9 {
         match mode {
-            Mode::Numeric(_) => 10,
-            Mode::Alphanumeric(_) => 9,
-            Mode::Byte(_) => 8,
+            Mode::Numeric => 10,
+            Mode::Alphanumeric => 9,
+            Mode::Byte => 8,
         }
     } else if v <= 26 {
         match mode {
-            Mode::Numeric(_) => 12,
-            Mode::Alphanumeric(_) => 11,
-            Mode::Byte(_) => 16,
+            Mode::Numeric => 12,
+            Mode::Alphanumeric => 11,
+            Mode::Byte => 16,
         }
     } else if v <= 40 {
         match mode {
-            Mode::Numeric(_) => 14,
-            Mode::Alphanumeric(_) => 13,
-            Mode::Byte(_) => 16,
+            Mode::Numeric => 14,
+            Mode::Alphanumeric => 13,
+            Mode::Byte => 16,
         }
     } else {
         panic!("Malformed version {}", v);
     }
 }
 
-fn bitvec_char_count(mode: &Mode, v: &Version) -> BitVec {
+fn bitvec_char_count(len: usize, mode: &Mode, v: &Version) -> BitVec {
     let required = char_count_len(mode, v);
-    let char_count = mode.len();
 
     let mut bv = BitVec::new();
-    append(&mut bv, char_count as u16, required);
+    append(&mut bv, len as u16, required);
     bv
 }
 
-fn bitvec_data(mode: &Mode) -> BitVec {
+fn bitvec_data(v: &Vec<u8>, mode: &Mode) -> BitVec {
     match mode {
-        Mode::Numeric(v) => encode_numeric_data(v),
-        Mode::Alphanumeric(v) => encode_alphanumeric_data(v),
-        Mode::Byte(v) => encode_byte_data(v),
+        Mode::Numeric => encode_numeric_data(v),
+        Mode::Alphanumeric => encode_alphanumeric_data(v),
+        Mode::Byte => encode_byte_data(v),
     }
 }
 
@@ -165,20 +170,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn encode_data() {
-        let numeric = Mode::Numeric(vec![0, 1, 2]);
-        let byte = Mode::Byte(vec![140, 141, 142]);
+    fn encode_full() {
+        let hello_res: BitVec = vec![0b00100000, 0b01011011, 0b00001011, 0b01111000,
+                                     0b11010001, 0b01110010, 0b11011100, 0b01001101,
+                                     0b01000011, 0b01000000,
+                                     // Three padding bytes
+                                     0b11101100, 0b00010001, 0b11101100].into();
+        assert_eq!(encode("HELLO WORLD", &Version::new(1), &ECLevel::Q),
+                   hello_res);
+    }
 
-        let hello_alpha = Mode::new("HELLO WORLD");
+    #[test]
+    fn internal() {
+        assert_eq!(bitvec_mode(&Mode::Numeric), bitvec![0, 0, 0, 1]);
 
-        assert_eq!(bitvec_mode(&numeric), bitvec![0, 0, 0, 1]);
+        assert_eq!(char_count_len(&Mode::Numeric, &Version::new(1)), 10);
+        assert_eq!(char_count_len(&Mode::Byte, &Version::new(40)), 16);
 
-        assert_eq!(char_count_len(&numeric, &Version::new(1)), 10);
-        assert_eq!(char_count_len(&byte, &Version::new(40)), 16);
-
-        assert_eq!(bitvec_char_count(&numeric, &Version::new(1)),
+        assert_eq!(bitvec_char_count(3, &Mode::Numeric, &Version::new(1)),
                    bitvec![0, 0, 0, 0, 0, 0, 0, 0, 1, 1]);
-        assert_eq!(bitvec_char_count(&hello_alpha, &Version::new(1)),
+        assert_eq!(bitvec_char_count("HELLO WORLD".len(), &Mode::Alphanumeric, &Version::new(1)),
                    bitvec![0, 0, 0, 0, 0, 1, 0, 1, 1]);
 
         assert_eq!(encode_numeric_data(&vec![8, 6, 7, 5, 3, 0, 9]),
@@ -189,14 +200,6 @@ mod tests {
                    bitvec![0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1]);
         assert_eq!(encode_alphanumeric_data(&vec![45]),
                    bitvec![1, 0, 1, 1, 0, 1]);
-
-        let hello_res: BitVec = vec![0b00100000, 0b01011011, 0b00001011, 0b01111000,
-                                     0b11010001, 0b01110010, 0b11011100, 0b01001101,
-                                     0b01000011, 0b01000000,
-                                     // Three padding bytes
-                                     0b11101100, 0b00010001, 0b11101100].into();
-        assert_eq!(encode(&hello_alpha, &Version::new(1), &ECLevel::Q),
-                   hello_res);
     }
 }
 

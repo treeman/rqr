@@ -11,6 +11,44 @@ pub enum ECLevel {
     H, // Recovers 30% of data
 }
 
+pub fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
+    let layout = group_block_count(v, ecl);
+    assert_eq!(bv.len() / 8, layout.iter().sum());
+
+    let blocks = group_into_blocks(&bv, &layout);
+    let mut bytes: Vec<u8> = Vec::with_capacity(bv.len() / 8);
+
+    // First interleave all codewords in blocks.
+    let layout_max = layout.iter().max().unwrap();
+    for i in 0..*layout_max {
+        for block in blocks.iter() {
+            if i < block.len() {
+                bytes.push(block[i]);
+            }
+        }
+    }
+
+    // Then interleave all ec codewords in blocks.
+    let ec_count = block_ec_count(v, ecl);
+    let ec_blocks: Vec<Vec<u8>> = blocks.iter()
+        .map(|x| generate_ec_codewords(x.as_slice(), ec_count))
+        .collect();
+    for i in 0..ec_count {
+        for ec in ec_blocks.iter() {
+            bytes.push(ec[i]);
+        }
+    }
+
+    let mut res: BitVec = bytes.into();
+
+    // Add padding remainder bits.
+    let remainder = REMAINDER_BITS[v.index()];
+    res.resize(res.len() + remainder, false);
+    assert_eq!(res.len(), bv.len() + 8 * ec_count * layout.len() + remainder);
+
+    res
+}
+
 fn generate_ec_codewords(msg: &[u8], ec_count: usize) -> Vec<u8> {
     let gen = GEN_POLYS[ec_count];
     assert_eq!(gen.len(), ec_count);
@@ -59,44 +97,6 @@ fn group_into_blocks(bv: &BitVec, layout: &Vec<usize>) -> Vec<Vec<u8>> {
         // but I couldn't get past the borrow checker. I tried this:
         //res.push(data_it.take(*block).map(|x| *x as u8).collect());
     }
-    res
-}
-
-pub fn interleave_ec(bv: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
-    let layout = group_block_count(v, ecl);
-    assert_eq!(bv.len() / 8, layout.iter().sum());
-
-    let blocks = group_into_blocks(&bv, &layout);
-    let mut bytes: Vec<u8> = Vec::with_capacity(bv.len() / 8);
-
-    // First interleave all codewords in blocks.
-    let layout_max = layout.iter().max().unwrap();
-    for i in 0..*layout_max {
-        for block in blocks.iter() {
-            if i < block.len() {
-                bytes.push(block[i]);
-            }
-        }
-    }
-
-    // Then interleave all ec codewords in blocks.
-    let ec_count = block_ec_count(v, ecl);
-    let ec_blocks: Vec<Vec<u8>> = blocks.iter()
-        .map(|x| generate_ec_codewords(x.as_slice(), ec_count))
-        .collect();
-    for i in 0..ec_count {
-        for ec in ec_blocks.iter() {
-            bytes.push(ec[i]);
-        }
-    }
-
-    let mut res: BitVec = bytes.into();
-
-    // Add padding remainder bits.
-    let remainder = REMAINDER_BITS[v.index()];
-    res.resize(res.len() + remainder, false);
-    assert_eq!(res.len(), bv.len() + 8 * ec_count * layout.len() + remainder);
-
     res
 }
 
