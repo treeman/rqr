@@ -1,5 +1,5 @@
 use crate::mode::Mode;
-use crate::ec_encoding::ECLevel;
+use crate::ec::ECLevel;
 
 /// QR code version, defines the size
 #[derive(Debug, Clone)]

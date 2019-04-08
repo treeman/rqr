@@ -1,6 +1,7 @@
 use regex::Regex;
 
 /// Encoding modes.
+// FIXME break out data from enum.
 #[derive(Debug, PartialEq)]
 pub enum Mode {
     Numeric(Vec<u8>), // 0..9

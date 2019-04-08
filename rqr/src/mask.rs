@@ -1,8 +1,9 @@
 
-pub fn evaluate(qr: &Qr) -> u16) {
+pub fn evaluate(modules: &BitVec) -> u16 {
     0
 }
 
-//pub fn mask(qr: &Qr) -> Qr {
+pub fn mask(modules: &BitVec) -> BitVec {
+    modules
+}
 
-//}

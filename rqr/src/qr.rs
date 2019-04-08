@@ -1,8 +1,8 @@
 use crate::version::Version;
 use crate::mode::Mode;
 use crate::data_encoding;
-use crate::ec_encoding;
-use crate::ec_encoding::ECLevel;
+use crate::ec;
+use crate::ec::ECLevel;
 use bitvec::*;
 
 pub struct Qr {
@@ -136,7 +136,7 @@ impl Qr {
     fn add_data(&mut self, mode: &Mode, v: &Version, ecl: &ECLevel) {
         // FIXME cleanup interface later.
         let data = data_encoding::encode(mode, v, ecl);
-        let data = ec_encoding::interleave_ec(data, v, ecl);
+        let data = ec::interleave_ec(data, v, ecl);
 
         let mut data_i = 0;
         for (x, y) in ZigZagIt::new(self.size) {

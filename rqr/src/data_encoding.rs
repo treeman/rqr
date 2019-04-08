@@ -1,12 +1,43 @@
 //mod mode;
 use crate::mode::Mode;
-use crate::ec_encoding::ECLevel;
+use crate::ec::ECLevel;
 use crate::version::Version;
 use crate::block_info::*;
 
 use bitvec::*;
 use std::cmp;
 
+pub fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
+    let total_capacity = total_bits(version, ecl);
+
+    let mut bv = bitvec_mode(mode);
+    bv.reserve(total_capacity);
+    bv.append(&mut bitvec_char_count(mode, version));
+    // FIXME here we can decide on the minimal version?
+    bv.append(&mut bitvec_data(mode));
+    assert!(bv.len() <= total_capacity);
+
+    // Add up to 4 zero bits if we're below capacity.
+    let zero_bits = cmp::min(total_capacity - bv.len(), 4);
+    append(&mut bv, 0, zero_bits);
+    assert!(bv.len() <= total_capacity);
+
+    // If we're still below capacity add zero bits until we have full bytes.
+    let zero_bits = (total_capacity - bv.len()) % 8;
+    append(&mut bv, 0, zero_bits);
+    assert!(bv.len() % 8 == 0);
+
+    // Until we reach our capacity add pad bytes.
+    for pad in [0xEC, 0x11].iter().cycle() {
+        if bv.len() >= total_capacity {
+            break;
+        }
+        append(&mut bv, *pad, 8);
+    }
+    assert_eq!(bv.len(), total_capacity);
+
+    bv
+}
 
 fn bitvec_mode(mode: &Mode) -> BitVec {
     match mode {
@@ -128,39 +159,6 @@ fn encode_byte_data(v: &Vec<u8>) -> BitVec {
 fn append(bv: &mut BitVec, v: u16, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
-
-pub fn encode(mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
-    let total_capacity = total_bits(version, ecl);
-
-    let mut bv = bitvec_mode(mode);
-    bv.reserve(total_capacity);
-    bv.append(&mut bitvec_char_count(mode, version));
-    // FIXME here we can decide on the minimal version?
-    bv.append(&mut bitvec_data(mode));
-    assert!(bv.len() <= total_capacity);
-
-    // Add up to 4 zero bits if we're below capacity.
-    let zero_bits = cmp::min(total_capacity - bv.len(), 4);
-    append(&mut bv, 0, zero_bits);
-    assert!(bv.len() <= total_capacity);
-
-    // If we're still below capacity add zero bits until we have full bytes.
-    let zero_bits = (total_capacity - bv.len()) % 8;
-    append(&mut bv, 0, zero_bits);
-    assert!(bv.len() % 8 == 0);
-
-    // Until we reach our capacity add pad bytes.
-    for pad in [0xEC, 0x11].iter().cycle() {
-        if bv.len() >= total_capacity {
-            break;
-        }
-        append(&mut bv, *pad, 8);
-    }
-    assert_eq!(bv.len(), total_capacity);
-
-    bv
-}
-
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,5 @@
 use crate::version::Version;
-use crate::ec_encoding::ECLevel;
+use crate::ec::ECLevel;
 
 pub fn total_codewords(v: &Version, ecl: &ECLevel) -> usize {
     let d = block_data(v, ecl);

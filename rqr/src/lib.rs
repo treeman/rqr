@@ -4,13 +4,13 @@
 pub mod version;
 pub mod mode;
 pub mod data_encoding;
-pub mod ec_encoding;
+pub mod ec;
 pub mod qr;
 mod block_info;
 
 use mode::Mode;
 use version::Version;
-use ec_encoding::ECLevel;
+use ec::ECLevel;
 
 pub fn qr(x: &str) {
     println!("qr {}", x);
