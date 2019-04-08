@@ -6,21 +6,20 @@ use crate::ec::ECLevel;
 pub struct Version(usize);
 
 impl Version {
+    /// Create a new version, must be in the [1..40] range.
     pub fn new(v: usize) -> Version {
         assert!(v >= 1 && v <= 40);
         Version(v)
     }
 
-    // FIXME move out of impl?
-    pub fn minimal(_mode: &Mode, _e: &ECLevel) -> Version {
+    /// Calculate the minimal required version to hold the string
+    /// in the given mode with the required error correction level.
+    pub fn minimal(_s: &str, _mode: &Mode, _e: &ECLevel) -> Option<Version> {
         // TODO minimal version calculation
-        Version(1)
+        Some(Version(1))
     }
 
-    pub fn index(&self) -> usize {
-        (self.0 - 1)
-    }
-
+    /// Return the size of the QR code.
     pub fn size(&self) -> usize {
         (((self.0 - 1) * 4) + 21)
     }
@@ -58,6 +57,11 @@ impl Version {
     /// Returns the position of the dark module.
     pub fn dark_module_pos(&self) -> (usize, usize) {
         (8, 4 * self.0 + 9)
+    }
+
+    /// Return the version value - 1, suitable for indexing.
+    pub fn index(&self) -> usize {
+        (self.0 - 1)
     }
 }
 

@@ -101,8 +101,8 @@ fn group_into_blocks(bv: &BitVec, layout: &Vec<usize>) -> Vec<Vec<u8>> {
     res
 }
 
-/// Helper method to crate a BitVec from a string with '0' and '1'.
-/// Discards any other characters, like newlines.
+// Helper method to crate a BitVec from a string with '0' and '1'.
+// Discards any other characters, like newlines.
 fn bitvec_from_bin_str(s: &str) -> BitVec {
     s.chars()
      .filter(|x| *x == '1' || *x == '0')

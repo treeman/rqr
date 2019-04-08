@@ -1,18 +1,20 @@
 use crate::version::Version;
 use crate::ec::ECLevel;
 
+/// Returns the total codewords for a given version end error correction.
 pub fn total_codewords(v: &Version, ecl: &ECLevel) -> usize {
     let d = block_data(v, ecl);
     d.1 * d.2 + d.3 * d.4
 }
 
+/// Returns the total data bits possible for a given version and error correction.
 pub fn total_bits(v: &Version, ecl: &ECLevel) -> usize {
     8 * total_codewords(v, ecl)
 }
 
-/// Return a vector of codewords counts per block.
+/// Returns a vector of codewords counts per block.
 /// The length specifies how many blocks there are and each element
-/// how the codewords of that block.
+/// how many codewords exist in that block.
 pub fn group_block_count(v: &Version, ecl: &ECLevel) -> Vec<usize> {
     let data = block_data(v, ecl);
     let mut v = Vec::new();
@@ -21,7 +23,7 @@ pub fn group_block_count(v: &Version, ecl: &ECLevel) -> Vec<usize> {
     v
 }
 
-/// Error correction codewords per block.
+/// Returns error correction codewords per block.
 pub fn block_ec_count(v: &Version, ecl: &ECLevel) -> usize {
     block_data(v, ecl).0
 }
