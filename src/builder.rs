@@ -7,6 +7,8 @@ use crate::matrix::Matrix;
 use crate::render;
 use crate::version::Version;
 
+use bitvec::*;
+
 /// Builder for a QR code.
 pub struct QrBuilder {
     pub version: Version,
@@ -38,7 +40,7 @@ impl QrBuilder {
         self.add_timing_patterns();
         self.add_dark_module();
         self.add_reserved_areas();
-        self.add_string(s, ecl);
+        self.add_data(s, ecl);
     }
 
     /// Build mask.
@@ -51,7 +53,11 @@ impl QrBuilder {
     /// Build format and version information.
     pub fn build_info(&mut self, ecl: &ECLevel) {
         let format = info::format_info(ecl, self.mask.unwrap());
-        println!("format {:?}", format);
+        self.add_format(&format);
+
+        if let Some(v) = info::version_info(&self.version) {
+            self.add_version(&v);
+        }
     }
 
     fn add_finders(&mut self) {
@@ -144,7 +150,7 @@ impl QrBuilder {
         }
     }
 
-    fn add_string(&mut self, s: &str, ecl: &ECLevel) {
+    fn add_data(&mut self, s: &str, ecl: &ECLevel) {
         let v = data::encode(s, &self.version, ecl);
         let v = ec::add(v, &self.version, ecl);
 
@@ -157,6 +163,60 @@ impl QrBuilder {
         assert_eq!(v_i, v.len());
     }
 
+    fn add_format(&mut self, bv: &BitVec) {
+        assert_eq!(bv.len(), 15);
+        let size = self.matrix.size;
+
+        // Info surrounding the top left finder.
+        let mut iter = bv.iter();
+        for x in 0..8 {
+            // Avoid timing pattern.
+            if x == 6 { continue; }
+            self.matrix.set(x, 8, iter.next().unwrap());
+        }
+        for y in (0..9).rev() {
+            // Avoid timing pattern.
+            if y == 6 { continue; }
+            self.matrix.set(8, y, iter.next().unwrap());
+        }
+        assert_eq!(iter.next(), None);
+
+        // Half to the right of the bottom left finder.
+        iter = bv.iter();
+        for y in (size - 7..size).rev() {
+            self.matrix.set(8, y, iter.next().unwrap());
+        }
+        // Rest bottom of the top left finder.
+        for x in (size - 8)..size {
+            self.matrix.set(x, 8, iter.next().unwrap());
+        }
+        assert_eq!(iter.next(), None);
+    }
+
+    fn add_version(&mut self, bv: &BitVec) {
+        assert_eq!(bv.len(), 18);
+        let size = self.matrix.size;
+
+        // Bottom left version block.
+        let mut iter = bv.iter();
+        for x in 0..6 {
+            for y in (size - 11)..(size - 8) {
+                self.matrix.set(x, y, iter.next().unwrap());
+            }
+        }
+        assert_eq!(iter.next(), None);
+
+        // Top right version block.
+        iter = bv.iter();
+        for y in 0..6 {
+            for x in (size - 11)..(size - 8) {
+                self.matrix.set(x, y, iter.next().unwrap());
+            }
+        }
+        assert_eq!(iter.next(), None);
+    }
+
+    /// Convert matrix to string.
     pub fn to_string(&self) -> String {
         render::to_string(&self.matrix)
     }
@@ -275,11 +335,88 @@ mod tests {
     }
 
     #[test]
-    fn build() {
+    fn build_v1() {
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.build("HELLO WORLD", &ECLevel::Q);
         println!("{}", builder.to_string());
-        assert!(false);
+        let expected = 
+"#######.###.#.#######
+#.....#...##..#.....#
+#.###.#.#.#...#.###.#
+#.###.#.......#.###.#
+#.###.#...#.#.#.###.#
+#.....#.#.##..#.....#
+#######.#.#.#.#######
+..........#..........
+#.#...##..##...#..#.#
+.#......####....#...#
+##.#.##.###.##..#####
+.#..#..##.#..###..###
+..#...#....#...#.....
+........####.##.#.###
+#######.#..##..##....
+#.....#..#.##.##.#...
+#.###.#...#.##.###...
+#.###.#..#...###.#.##
+#.###.#.#.####.####..
+#.....#....##...##..#
+#######.#.#.#######.#
+";
+        assert_eq!(builder.to_string(), expected);
+    }
+
+    #[test]
+    fn build_v7() {
+        let mut builder = QrBuilder::new(&Version::new(7));
+        builder.build("HELLO WORLD", &ECLevel::Q);
+        let expected = 
+"#######.###...#..##.....#.#..#.##.###.#######
+#.....#.####.#.#.#.#.###.###..#.##....#.....#
+#.###.#..#..##.#..#..###.#.#.#.#....#.#.###.#
+#.###.#.#.#.#..#.#...#.#.###.###.##.#.#.###.#
+#.###.#...###.####..#####.#...#..##.#.#.###.#
+#.....#....###.#.##.#...##.#.#.#...##.#.....#
+#######.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#######
+........####..#.#####...##...#...#.#.........
+#.##.###..#..##...#######..#...#...#..#..#.##
+..##....######.#..##.#.#..###.###.##.#.##.###
+..#.#.#..........#.###.#.#..##..##.....#.##.#
+..###..##.##.....#.##..#.#.###..##.#..#.#.###
+.###.##..#.###.#...#.....###.##.####....#.##.
+..####..##..#####.#...##..#...###.#.##.##.#..
+##.##.#.###.###.######..####.##.#####.#.####.
+#.##...##.....###...#####.###.###..#..####.##
+#.###.##.#.##.#.....###..##.###.##..###.#...#
+..###..######.#.####.#.#..###.###.##..###.##.
+##.######.####.##.#...#.#.##..##.##...##...##
+#...##...#..####..#.###.#.#...#...#.#.##.#...
+.##############.#..#########.###.########.#..
+....#...####.#.#.#.##...##.###.###..#...##.##
+###.#.#.##.#..###...#.#.#...#...#..##.#.##..#
+#####...##...#......#...#.#.##..##.##...#####
+....#####...##.###########..####.#########.#.
+...###.........#...#.....#.##.##..#.###.##.#.
+#######.##.#.#.###..#.##..#.###..##.#.###...#
+.#...#.#.####...#.....##...###.##.#.#..#..#..
+#.....###.###..#..##.######.#...###...####.#.
+..#.#..#..#.##.#..#..##..#.###.##.#.###.#.###
+...#.##..###.#...#####..##.#.###..##.#.....#.
+....##.###..#.####.##.##..##..##..###.##.#...
+...####.###.##..##...#..#...###.###...#...##.
+####...#.....###.######.#....#...#.#....##..#
+#..##.#.#.#.#.....###..#...#...#...#.#.##..#.
+#....#..######.#.#.#.##..#..#.###.#.#...##...
+#.########.#.#..###.#####.#.#..#...########.#
+........##...##.###.#...#..###...#..#...##.#.
+#######.#######.##.##.#.#.#.#.##..###.#.#...#
+#.....#.#.#..##.#..##...##..##..#...#...#.#..
+#.###.#....#...###..########...#.#..######.#.
+#.###.#.#....##.#..##..##....#...#.##...##..#
+#.###.#.##.#.....#..#.#.###.###.##.#.#.#####.
+#.....#...#.....#.####.#..##.#.#.#....#.#.###
+#######.#.##.##..####..##.#.#...#..#.....###.
+";
+        assert_eq!(builder.to_string(), expected);
     }
 }
 

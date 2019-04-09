@@ -43,9 +43,10 @@ pub fn format_info(ecl: &ECLevel, mask: usize) -> BitVec {
 /// Valid for larger versions only.
 pub fn version_info(v: &Version) -> Option<BitVec> {
     if v.extra_version_areas() {
+        println!("{}", v.0 - 7);
         let x = VERSION_INFO[v.0 - 7];
-        let mut bv = BitVec::with_capacity(17);
-        data::append(&mut bv, x, 17);
+        let mut bv = BitVec::with_capacity(18);
+        data::append(&mut bv, x, 18);
         Some(bv)
     } else {
         None
@@ -68,6 +69,16 @@ mod tests {
                    vec![13]);
         assert_eq!(group_block_count(&Version::new(5), &ECLevel::Q),
                    vec![15, 15, 16, 16]);
+    }
+
+    #[test]
+    fn info() {
+        assert_eq!(format_info(&ECLevel::L, 4),
+                   bitvec![1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1]);
+        assert_eq!(version_info(&Version::new(6)), None);
+        assert_eq!(version_info(&Version::new(7)),
+                   Some(bitvec![0, 0, 0, 1, 1, 1, 1, 1, 0,
+                                0, 1, 0, 0, 1, 0, 1, 0, 0]));
     }
 }
 

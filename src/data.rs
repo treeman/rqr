@@ -47,6 +47,11 @@ pub fn encode_with_mode(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) 
     bv
 }
 
+/// Append data to bitvec of a certain len.
+pub fn append(bv: &mut BitVec, v: u32, len: usize) {
+    bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
+}
+
 fn bitvec_char_count(len: usize, mode: &Mode, v: &Version) -> BitVec {
     let mut bv = BitVec::new();
     append(&mut bv, len as u32, v.char_count_len(mode));
@@ -128,11 +133,6 @@ fn encode_alphanumeric_data(v: &Vec<u8>) -> BitVec {
 fn encode_byte_data(v: &Vec<u8>) -> BitVec {
     // It's already in ISO 8859-1, or UTF-8
     v[..].into()
-}
-
-/// Append data to bitvec of a certain len.
-pub fn append(bv: &mut BitVec, v: u32, len: usize) {
-    bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 
 // Converts string to byte representation.

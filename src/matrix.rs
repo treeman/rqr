@@ -52,12 +52,12 @@ impl Matrix {
     /// Set square outline.
     pub fn set_square_outline(&mut self, x: usize, y: usize, w: usize, v: bool) {
         // Above and below
-        for a in x..x + w {
+        for a in x..(x + w) {
             self.set(a, y, v);
             self.set(a, y + w - 1, v);
         }
         // Left and right
-        for b in y + 1..y + w - 1 {
+        for b in (y + 1)..(y + w - 1) {
             self.set(x, b, v);
             self.set(x + w - 1, b, v);
         }
@@ -82,8 +82,8 @@ impl Matrix {
 
     /// Mark modules in rect as functions.
     pub fn mark_fun_rect(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
-        for a in x0..x1 + 1 {
-            for b in y0..y1 + 1 {
+        for a in x0..(x1 + 1) {
+            for b in y0..(y1 + 1) {
                 self.mark_fun(a, b);
             }
         }
@@ -91,8 +91,8 @@ impl Matrix {
 
     /// Return true if any module in a rect is marked as function
     pub fn any_fun_in_square(&self, x: usize, y: usize, w: usize) -> bool {
-        for b in y..y + w {
-            for a in x..x + w {
+        for b in y..(y + w) {
+            for a in x..(x + w) {
                 if self.is_fun(a, b) {
                     return true;
                 }
