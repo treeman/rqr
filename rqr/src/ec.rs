@@ -1,5 +1,6 @@
 use crate::version::Version;
-use crate::block_info::*;
+use crate::info;
+
 use bitvec::*;
 
 /// Error correction level
@@ -25,7 +26,7 @@ impl ECLevel {
 
 /// Add error correction codewords to data.
 pub fn add(data: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
-    let layout = group_block_count(v, ecl);
+    let layout = info::group_block_count(v, ecl);
     assert_eq!(data.len() / 8, layout.iter().sum());
 
     let blocks = group_into_blocks(&data, &layout);
@@ -42,7 +43,7 @@ pub fn add(data: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
     }
 
     // Then interleave all ec codewords in blocks.
-    let ec_count = block_ec_count(v, ecl);
+    let ec_count = info::block_ec_count(v, ecl);
     let ec_blocks: Vec<Vec<u8>> = blocks.iter()
         .map(|x| generate_ec_codewords(x.as_slice(), ec_count))
         .collect();
@@ -129,7 +130,7 @@ mod tests {
 
     #[test]
     fn ec_tutorial_example() {
-        let ec_count = block_ec_count(&Version::new(1), &ECLevel::M);
+        let ec_count = info::block_ec_count(&Version::new(1), &ECLevel::M);
         assert_eq!(ec_count, 10);
 
         let data: [u8; 16] = [0b00100000, 0b01011011, 0b00001011, 0b01111000, 0b11010001,
@@ -142,7 +143,7 @@ mod tests {
 
     #[test]
     fn group_tutorial_example() {
-        let layout = group_block_count(&Version::new(5), &ECLevel::Q);
+        let layout = info::group_block_count(&Version::new(5), &ECLevel::Q);
         assert_eq!(layout, vec![15, 15, 16, 16]);
 
         let bv: BitVec = vec![

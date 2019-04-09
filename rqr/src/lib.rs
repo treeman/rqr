@@ -1,11 +1,10 @@
 // Just during development phase
 #![allow(dead_code)]
 
-mod block_info;
 mod builder;
 mod data;
 mod ec;
-mod format;
+mod info;
 mod mask;
 mod matrix;
 mod mode;

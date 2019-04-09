@@ -1,5 +1,8 @@
 use crate::version::Version;
 use crate::ec::ECLevel;
+use crate::data;
+
+use bitvec::*;
 
 /// Returns the total codewords for a given version end error correction.
 pub fn total_codewords(v: &Version, ecl: &ECLevel) -> usize {
@@ -28,10 +31,30 @@ pub fn block_ec_count(v: &Version, ecl: &ECLevel) -> usize {
     block_data(v, ecl).0
 }
 
+/// Returns the format BitVec representation to be embedded.
+pub fn format_info(ecl: &ECLevel, mask: usize) -> BitVec {
+    let x = FORMAT_INFO[mask][*ecl as usize];
+    let mut bv = BitVec::with_capacity(15);
+    data::append(&mut bv, x as u32, 15);
+    bv
+}
+
+/// Returns the version BitVec representation to be embedded.
+/// Valid for larger versions only.
+pub fn version_info(v: &Version) -> Option<BitVec> {
+    if v.extra_version_areas() {
+        let x = VERSION_INFO[v.0 - 7];
+        let mut bv = BitVec::with_capacity(17);
+        data::append(&mut bv, x, 17);
+        Some(bv)
+    } else {
+        None
+    }
+}
+
 fn block_data(v: &Version, ecl: &ECLevel) -> (usize, usize, usize, usize, usize) {
     BLOCK_INFO[v.index()][*ecl as usize]
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -139,3 +162,52 @@ static BLOCK_INFO: [[(usize,  usize, usize, usize, usize); 4]; 40] = [
      (30, 34, 24,  34, 25),  (30, 20, 15,  61, 16)],
 ];
 
+// Format information for mask x ECLevel.
+static FORMAT_INFO: [[u16; 4]; 8] = [
+    [0b111011111000100, 0b101010000010010, 0b011010101011111, 0b001011010001001],
+    [0b111001011110011, 0b101000100100101, 0b011000001101000, 0b001001110111110],
+    [0b111110110101010, 0b101111001111100, 0b011111100110001, 0b001110011100111],
+    [0b111100010011101, 0b101101101001011, 0b011101000000110, 0b001100111010000],
+    [0b110011000101111, 0b100010111111001, 0b010010010110100, 0b000011101100010],
+    [0b110001100011000, 0b100000011001110, 0b010000110000011, 0b000001001010101],
+    [0b110110001000001, 0b100111110010111, 0b010111011011010, 0b000110100001100],
+    [0b110100101110110, 0b100101010100000, 0b010101111101101, 0b000100000111011]
+];
+
+// Version information, start indexing from version 7 and up.
+static VERSION_INFO: [u32; 34] = [
+    0b000111110010010100,
+    0b001000010110111100,
+    0b001001101010011001,
+    0b001010010011010011,
+    0b001011101111110110,
+    0b001100011101100010,
+    0b001101100001000111,
+    0b001110011000001101,
+    0b001111100100101000,
+    0b010000101101111000,
+    0b010001010001011101,
+    0b010010101000010111,
+    0b010011010100110010,
+    0b010100100110100110,
+    0b010101011010000011,
+    0b010110100011001001,
+    0b010111011111101100,
+    0b011000111011000100,
+    0b011001000111100001,
+    0b011010111110101011,
+    0b011011000010001110,
+    0b011100110000011010,
+    0b011101001100111111,
+    0b011110110101110101,
+    0b011111001001010000,
+    0b100000100111010101,
+    0b100001011011110000,
+    0b100010100010111010,
+    0b100011011110011111,
+    0b100100101100001011,
+    0b100101010000101110,
+    0b100110101001100100,
+    0b100111010101000001,
+    0b101000110001101001
+];

@@ -3,7 +3,7 @@ use crate::ec::ECLevel;
 
 /// QR code version, defines the size
 #[derive(Debug, Clone)]
-pub struct Version(usize);
+pub struct Version(pub usize);
 
 impl Version {
     /// Create a new version, must be in the [1..40] range.

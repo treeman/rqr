@@ -1,7 +1,7 @@
 use crate::mode::Mode;
 use crate::ec::ECLevel;
 use crate::version::Version;
-use crate::block_info::*;
+use crate::info;
 
 use bitvec::*;
 use std::cmp;
@@ -16,7 +16,7 @@ pub fn encode(s: &str, version: &Version, ecl: &ECLevel) -> BitVec {
 /// Encode string data to BitVec in a specific mode.
 /// Does not include error correction codes, it only encodes the data portion.
 pub fn encode_with_mode(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) -> BitVec {
-    let total_capacity = total_bits(version, ecl);
+    let total_capacity = info::total_bits(version, ecl);
 
     // Encoding is mode, char count, data.
     let mut bv = mode.to_bitvec();
@@ -49,7 +49,7 @@ pub fn encode_with_mode(s: &str, mode: &Mode, version: &Version, ecl: &ECLevel) 
 
 fn bitvec_char_count(len: usize, mode: &Mode, v: &Version) -> BitVec {
     let mut bv = BitVec::new();
-    append(&mut bv, len as u16, v.char_count_len(mode));
+    append(&mut bv, len as u32, v.char_count_len(mode));
     bv
 }
 
@@ -71,7 +71,7 @@ fn encode_numeric_data(v: &Vec<u8>) -> BitVec {
     // If the first number in the group is zero it should use 7 bits.
     // Otherwise it should use 10 bits.
     // It's the minimal amount of bits that can all numbers of that length.
-    let bit_len = |num: u16| {
+    let bit_len = |num: u32| {
         if num > 99 {
             10
         } else if num > 9 {
@@ -85,7 +85,7 @@ fn encode_numeric_data(v: &Vec<u8>) -> BitVec {
     bv.reserve(v.len() * 8);
 
     let mut add = |s: &str| {
-        let num: u16 = s.parse().unwrap();
+        let num: u32 = s.parse().unwrap();
         let len = bit_len(num);
         append(&mut bv, num, len);
     };
@@ -114,11 +114,11 @@ fn encode_alphanumeric_data(v: &Vec<u8>) -> BitVec {
         if i + 1 < v.len() {
             // If there are two numbers, offset the first with * 46
             // as there are 45 possible characters, it fits into 11 bits.
-            let num = 45 * (v[i] as u16) + (v[i + 1] as u16);
+            let num = 45 * (v[i] as u32) + (v[i + 1] as u32);
             append(&mut bv, num, 11);
         } else {
             // Otherwise 45 needs 6 bits.
-            let num = v[i] as u16;
+            let num = v[i] as u32;
             append(&mut bv, num, 6);
         }
     }
@@ -131,7 +131,7 @@ fn encode_byte_data(v: &Vec<u8>) -> BitVec {
 }
 
 /// Append data to bitvec of a certain len.
-pub fn append(bv: &mut BitVec, v: u16, len: usize) {
+pub fn append(bv: &mut BitVec, v: u32, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 

@@ -1,7 +1,7 @@
 use crate::data;
 use crate::ec::ECLevel;
 use crate::ec;
-use crate::format;
+use crate::info;
 use crate::mask;
 use crate::matrix::Matrix;
 use crate::render;
@@ -27,7 +27,7 @@ impl QrBuilder {
     pub fn build(&mut self, s: &str, ecl: &ECLevel) {
         self.build_until_masking(s, ecl);
         self.build_mask();
-        self.build_information(ecl);
+        self.build_info(ecl);
     }
 
     /// Build modules before masking (and format/version info) is applied.
@@ -49,8 +49,8 @@ impl QrBuilder {
     }
 
     /// Build format and version information.
-    pub fn build_information(&mut self, ecl: &ECLevel) {
-        let format = format::information(ecl, self.mask.unwrap());
+    pub fn build_info(&mut self, ecl: &ECLevel) {
+        let format = info::format_info(ecl, self.mask.unwrap());
         println!("format {:?}", format);
     }
 
