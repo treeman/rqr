@@ -12,7 +12,6 @@ pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
     for mask in 0..8 {
         let masked = apply_mask(mask, matrix);
         let score = evaluate(&masked);
-        println!("{}: {}", mask, score);
         if score < min_score {
             min_score = score;
             res = Some((mask, masked));

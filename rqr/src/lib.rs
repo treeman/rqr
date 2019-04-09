@@ -5,6 +5,7 @@ mod block_info;
 mod builder;
 mod data;
 mod ec;
+mod format;
 mod mask;
 mod matrix;
 mod mode;

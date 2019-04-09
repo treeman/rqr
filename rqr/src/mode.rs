@@ -1,5 +1,6 @@
 use regex::Regex;
 use bitvec::*;
+use lazy_static::lazy_static;
 
 /// Encoding modes.
 #[derive(Debug, PartialEq)]
@@ -14,12 +15,9 @@ pub enum Mode {
 impl Mode {
     /// Create Mode from string, decide from content.
     pub fn from_str(s: &str) -> Mode {
-        let numeric = Regex::new(r"^[0-9]+$").unwrap();
-        let alphanumeric = Regex::new(r"^[0-9A-Z$%*+-./: ]+$").unwrap();
-
-        if numeric.is_match(s) {
+        if NUMERIC_RX.is_match(s) {
             Mode::Numeric
-        } else if alphanumeric.is_match(s) {
+        } else if ALPHANUMERIC_RX.is_match(s) {
             Mode::Alphanumeric
         } else {
             Mode::Byte
@@ -34,6 +32,11 @@ impl Mode {
             Mode::Byte => bitvec![0, 1, 0, 0],
         }
     }
+}
+
+lazy_static! {
+    static ref NUMERIC_RX: Regex = Regex::new(r"^[0-9]+$").unwrap();
+    static ref ALPHANUMERIC_RX: Regex = Regex::new(r"^[0-9A-Z$%*+-./: ]+$").unwrap();
 }
 
 #[cfg(test)]

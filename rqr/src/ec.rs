@@ -11,6 +11,18 @@ pub enum ECLevel {
     H, // Recovers 30% of data
 }
 
+impl ECLevel {
+    /// Returns the bit encoding.
+    pub fn to_bitvec(&self) -> BitVec {
+        match self {
+            ECLevel::L => bitvec![0, 1],
+            ECLevel::M => bitvec![0, 0],
+            ECLevel::Q => bitvec![1, 1],
+            ECLevel::H => bitvec![1, 0],
+        }
+    }
+}
+
 /// Add error correction codewords to data.
 pub fn add(data: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
     let layout = group_block_count(v, ecl);

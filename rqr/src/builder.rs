@@ -1,6 +1,8 @@
 use crate::data;
 use crate::ec::ECLevel;
 use crate::ec;
+use crate::format;
+use crate::mask;
 use crate::matrix::Matrix;
 use crate::render;
 use crate::version::Version;
@@ -9,6 +11,7 @@ use crate::version::Version;
 pub struct QrBuilder {
     pub version: Version,
     pub matrix: Matrix,
+    pub mask: Option<usize>,
 }
 
 impl QrBuilder {
@@ -16,7 +19,15 @@ impl QrBuilder {
         QrBuilder {
             version: (*v).clone(),
             matrix: Matrix::new(v.size()),
+            mask: None,
         }
+    }
+
+    /// Build.
+    pub fn build(&mut self, s: &str, ecl: &ECLevel) {
+        self.build_until_masking(s, ecl);
+        self.build_mask();
+        self.build_information(ecl);
     }
 
     /// Build modules before masking (and format/version info) is applied.
@@ -30,10 +41,17 @@ impl QrBuilder {
         self.add_string(s, ecl);
     }
 
-    /// Build masking.
+    /// Build mask.
     pub fn build_mask(&mut self) {
-        let (mask, masked) = mask::mask(&this.matrix);
-        this.masked = masked;
+        let (mask, masked) = mask::mask(&self.matrix);
+        self.mask = Some(mask);
+        self.matrix = masked;
+    }
+
+    /// Build format and version information.
+    pub fn build_information(&mut self, ecl: &ECLevel) {
+        let format = format::information(ecl, self.mask.unwrap());
+        println!("format {:?}", format);
     }
 
     fn add_finders(&mut self) {
@@ -81,7 +99,7 @@ impl QrBuilder {
     fn try_add_alignment(&mut self, cx: usize, cy: usize) {
         let x = cx - 2;
         let y = cy - 2;
-        if !self.matrix.any_fun_in_square(x, y, 5) {
+        if !self.matrix.any_fun_in_square(x, y, 4) {
             self.matrix.set_square_outline(x + 1, y + 1, 3, true);
             self.matrix.mark_fun_square(x, y, 5);
         }
@@ -254,6 +272,14 @@ mod tests {
 #######.##....#..#.##
 "; // Includes a newline at the end
         assert_eq!(builder.to_string(), expected);
+    }
+
+    #[test]
+    fn build() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.build("HELLO WORLD", &ECLevel::Q);
+        println!("{}", builder.to_string());
+        assert!(false);
     }
 }
 

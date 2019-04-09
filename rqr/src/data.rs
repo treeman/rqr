@@ -130,7 +130,8 @@ fn encode_byte_data(v: &Vec<u8>) -> BitVec {
     v[..].into()
 }
 
-fn append(bv: &mut BitVec, v: u16, len: usize) {
+/// Append data to bitvec of a certain len.
+pub fn append(bv: &mut BitVec, v: u16, len: usize) {
     bv.extend((0..len).rev().map(|i| (v >> i) & 1 != 0));
 }
 
