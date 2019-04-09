@@ -218,7 +218,6 @@ impl Iterator for ZigZagIt {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::render;
 
     #[test]
     fn before_masking() {

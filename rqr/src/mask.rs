@@ -8,10 +8,6 @@ pub fn evaluate(matrix: &Matrix) -> u16 {
     let e2 = evaluate_2x2(matrix);
     let e3 = evaluate_dl_pattern(matrix);
     let e4 = evaluate_bw(matrix);
-    println!("e1: {}", e1);
-    println!("e2: {}", e2);
-    println!("e3: {}", e3);
-    println!("e4: {}", e4);
     e1 + e2 + e3 + e4
 }
 
@@ -36,7 +32,6 @@ fn eval_5_row(matrix: &Matrix, y: usize) -> u16 {
             curr = !curr;
         }
     }
-    //println!("row {}: {}", y, res);
     res
 }
 
@@ -52,7 +47,6 @@ fn eval_5_col(matrix: &Matrix, x: usize) -> u16 {
             curr = !curr;
         }
     }
-    //println!("col {}: {}", x, res);
     res
 }
 
@@ -80,7 +74,6 @@ fn evaluate_2x2(matrix: &Matrix) -> u16 {
             let set_count = vals.iter().filter(|x| **x).count();
             if set_count == 0 || set_count == 4 {
                 squares += 1;
-                //println!("square {},{}  {:?}", x, y, vals);
             }
         }
     }
@@ -88,12 +81,13 @@ fn evaluate_2x2(matrix: &Matrix) -> u16 {
 }
 
 fn evaluate_dl_pattern(matrix: &Matrix) -> u16 {
-    let mut res = 0;
+    let mut count = 0;
     for i in 0..matrix.size {
-        res += count_dl_row(matrix, i);
-        res += count_dl_col(matrix, i);
+        if i != 13 { continue; }
+        count += count_dl_row(matrix, i);
+        count += count_dl_col(matrix, i);
     }
-    res
+    count * 40
 }
 
 fn count_dl_row(matrix: &Matrix, y: usize) -> u16 {
@@ -106,6 +100,7 @@ fn count_dl_row(matrix: &Matrix, y: usize) -> u16 {
 
 fn count_dl_col(matrix: &Matrix, x: usize) -> u16 {
     let mut col = BitVec::with_capacity(matrix.size);
+    println!("x {}", x);
     for y in 0..matrix.size {
         col.push(matrix.is_set(x, y));
     }
@@ -114,16 +109,14 @@ fn count_dl_col(matrix: &Matrix, x: usize) -> u16 {
 
 fn count_dl_patterns(bv: &BitVec) -> u16 {
     // FIXME static allocation of representation.
-    let bv1 = bitvec![0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1];
-    let p1: &BitSlice = bv1.as_bitslice();
-    let bv2 = bitvec![1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0];
-    let p2: &BitSlice = bv2.as_bitslice();
+    let bv1 = bitvec![1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0];
+    let bv2 = bitvec![0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1];
     let mut res = 0;
     for w in bv.windows(11) {
-        //println!("  {}", w);
-        //println!("  {}", p2);
-        if *w == *p1 || *w == *p2 { // FIXME correct comparison
-            println!("    FOUND");
+        if w.iter().zip(bv1.iter()).all(|(x, y)| x == y) {
+            res += 1;
+        }
+        if w.iter().zip(bv2.iter()).all(|(x, y)| x == y) {
             res += 1;
         }
     }
@@ -154,11 +147,11 @@ mod tests {
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.build_until_masking("HELLO WORLD", &ECLevel::Q);
         println!("{}", builder.to_string());
-        let e = evaluate(&builder.matrix);
-        //println!("total: {}", e);
         assert_eq!(evaluate_5_in_line(&builder.matrix), 211);
         assert_eq!(evaluate_2x2(&builder.matrix), 135);
+        assert_eq!(evaluate_dl_pattern(&builder.matrix), 40);
         assert_eq!(evaluate_bw(&builder.matrix), 10);
+        assert_eq!(evaluate(&builder.matrix), 396);
         assert!(false);
     }
 }
