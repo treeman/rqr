@@ -18,6 +18,50 @@ pub fn to_string(matrix: &Matrix) -> String {
     res
 }
 
+pub fn to_svg(matrix: &Matrix) -> String {
+    let cell_w = 10;
+
+    let mut res = String::from(format!(
+"<?xml version=\"1.0\" standalone=\"yes\"?>
+<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"
+     viewBox=\"0 0 {w} {h}\" shape-rendering=\"crispEdges\">
+<rect x=\"0\" y=\"0\" width=\"{w}\" height=\"{h}\" fill=\"#fff\"/>
+<path fill=\"#000\" d=\"",
+    w = cell_w * (matrix.size + 8),
+    h = cell_w * (matrix.size + 8)));
+
+    for y in 0..matrix.size {
+        for x in 0..matrix.size {
+            if !matrix.is_set(x, y) {
+                res.push_str(format!("M{x} {y}h{w}v{h}H{x}V{y}",
+                                     x = (x + 4) * cell_w,
+                                     y = (y + 4) * cell_w,
+                                     w = cell_w,
+                                     h = cell_w).as_str());
+            }
+        }
+    }
+    res.push_str("\"/></svg>");
+    res
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::builder::QrBuilder;
+    use crate::version::Version;
+    use crate::ec::ECLevel;
+
+    #[test]
+    fn tmp() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.build("HELLO WORLD", &ECLevel::Q);
+        println!("{}", to_svg(&builder.matrix));
+        assert!(false);
+    }
+}
+
+
 //pub fn dbg_print(&self) {
     //let size = self.version.size();
 

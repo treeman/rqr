@@ -9,14 +9,15 @@ Errors in the tutorial:
 
 # TODO
 
-* Masking
-* Add format & version info
-* Generate svg
-* Generate bitmap
-* Additional options
-  1. Specify chars in string output
-  2. Toggle quiet zone
-  3. Set module width
+* Debug why it isn't working
+* Create CLI
+* Render refactoring
+    * Common type interface
+    * Bitmap
+    * Additional options
+    1. Specify chars in string output
+    2. Toggle quiet zone
+    3. Set module width
 * Calculate the minimal applicable version
   Move it after encoding data? To avoid having to include a big table.
 * Add doc comments
