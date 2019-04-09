@@ -1,6 +1,10 @@
-[workspace]
+[package]
+name = "rqr"
+version = "0.1.0"
+authors = ["Jonas Hietala <mail@jonashietala.se>"]
+edition = "2018"
 
-members = [
-    "rqr-cli",
-    "rqr",
-]
+[dependencies]
+regex = "1"
+bitvec = "0.10"
+lazy_static = "1.0"
