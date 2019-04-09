@@ -147,6 +147,53 @@ fn evaluate_bw(matrix: &Matrix) -> u16 {
     cmp::min(a, b) as u16
 }
 
+fn mask_fun(mask: usize) -> Box<Fn(usize, usize) -> bool> {
+    match mask {
+        0 => Box::new(move |row, col| (row + col) % 2 == 0),
+        1 => Box::new(move |row, _| row % 2 ==0),
+        2 => Box::new(move |_, col| col % 3 == 0),
+        3 => Box::new(move |row, col| (row + col) % 3 == 0),
+        4 => Box::new(move |row, col| (row / 2 + col / 3) % 2 == 0),
+        5 => Box::new(move |row, col| (row * col) % 2 + (row * col) % 3 == 0),
+        6 => Box::new(move |row, col| ((row * col) % 2 + (row * col) % 3) % 2 == 0),
+        7 => Box::new(move |row, col| ((row + col) % 2 + (row * col) % 3) % 2 == 0),
+        _ => panic!("Unsupported mask: {}", mask),
+    }
+}
+
+/// Evaluates masks.
+/// Returns the mask with the lowest score and a matrix with the mask applied.
+//pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
+    ////let masks = (0..8).map(|mask| apply_and_evaluate_mask(mask, matrix));
+    //// TODO get max
+    //for mask in 0..8 {
+        //let masked = 
+    //}
+//}
+
+/// Applies and evaluates mask.
+/// Returns the masking score and a matrix with the mask applied.
+fn apply_and_evaluate_mask(mask: usize, matrix: &Matrix) -> (u16, Matrix) {
+    let masked = apply_mask(mask, matrix);
+    (evaluate(&masked), masked)
+}
+
+/// Apply a mask of a specific type to a matrix.
+fn apply_mask(mask: usize, matrix: &Matrix) -> Matrix {
+    apply_mask_fun(mask_fun(mask), matrix)
+}
+
+fn apply_mask_fun(f: Box<Fn(usize, usize) -> bool>, matrix: &Matrix) -> Matrix {
+    let mut res = matrix.clone();
+    for y in 0..res.size {
+        for x in 0..res.size {
+            if !matrix.is_fun(x, y) && f(x, y) {
+                res.flip(x, y);
+            }
+        }
+    }
+    res
+}
 
 #[cfg(test)]
 mod tests {
@@ -154,9 +201,20 @@ mod tests {
     use crate::builder::QrBuilder;
     use crate::version::Version;
     use crate::ec::ECLevel;
+    use crate::render;
 
     #[test]
     fn masking() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.build_until_masking("HELLO WORLD", &ECLevel::Q);
+        println!("{}", builder.to_string());
+        let mask1 = apply_mask(0, &builder.matrix);
+        println!("{}", render::to_string(&mask1));
+        assert!(false);
+    }
+
+    #[test]
+    fn mask_evaluation() {
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.build_until_masking("HELLO WORLD", &ECLevel::Q);
         println!("{}", builder.to_string());
@@ -165,7 +223,6 @@ mod tests {
         assert_eq!(evaluate_dl_pattern(&builder.matrix), 80);
         assert_eq!(evaluate_bw(&builder.matrix), 10);
         assert_eq!(evaluate(&builder.matrix), 436);
-        assert!(false);
     }
 }
 

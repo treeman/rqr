@@ -1,6 +1,7 @@
 use bitvec::*;
 
 /// Matrix is a 2-dimensional grid holding the QR modules.
+#[derive(Clone)]
 pub struct Matrix {
     /// Size defines the width and height of the matrix.
     pub size: usize,
@@ -38,6 +39,13 @@ impl Matrix {
     /// Set a module.
     pub fn set(&mut self, x: usize, y: usize, v: bool) {
         let i = self.index(x, y);
+        self.modules.set(i, v);
+    }
+
+    /// Flip module bit at x,y.
+    pub fn flip(&mut self, x: usize, y: usize) {
+        let i = self.index(x, y);
+        let v = !self.modules[i];
         self.modules.set(i, v);
     }
 
