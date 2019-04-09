@@ -19,7 +19,8 @@ impl QrBuilder {
         }
     }
 
-    // Build modules before masking (and format/version info) is applied.
+    /// Build modules before masking (and format/version info) is applied.
+    /// Separated to allow testing.
     pub fn build_until_masking(&mut self, s: &str, ecl: &ECLevel) {
         self.add_finders();
         self.add_alignments();
@@ -27,6 +28,12 @@ impl QrBuilder {
         self.add_dark_module();
         self.add_reserved_areas();
         self.add_string(s, ecl);
+    }
+
+    /// Build masking.
+    pub fn build_mask(&mut self) {
+        let (mask, masked) = mask::mask(&this.matrix);
+        this.masked = masked;
     }
 
     fn add_finders(&mut self) {
