@@ -4,8 +4,32 @@ use bitvec::*;
 use std::cmp;
 use lazy_static::lazy_static;
 
+/// Evaluates masks.
+/// Returns the mask with the lowest score and a matrix with the mask applied.
+pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
+    let mut min_score = u16::max_value();
+    let mut res = None;
+    for mask in 0..8 {
+        let masked = apply_mask(mask, matrix);
+        let score = evaluate(&masked);
+        println!("{}: {}", mask, score);
+        if score < min_score {
+            min_score = score;
+            res = Some((mask, masked));
+        }
+    }
+    res.unwrap()
+}
+
+/// Apply a mask of a specific type to a matrix.
+pub fn apply_mask(mask: usize, matrix: &Matrix) -> Matrix {
+    apply_mask_fun(mask_fun(mask), matrix)
+}
+
 /// Evaluate the mask score of a matrix.
 pub fn evaluate(matrix: &Matrix) -> u16 {
+    // It might be possible to combine these in the implementation to make it
+    // more concice, but this is easier to understand, test and debug.
     let e1 = evaluate_5_in_line(matrix);
     let e2 = evaluate_2x2(matrix);
     let e3 = evaluate_dl_pattern(matrix);
@@ -161,28 +185,6 @@ fn mask_fun(mask: usize) -> Box<Fn(usize, usize) -> bool> {
     }
 }
 
-/// Evaluates masks.
-/// Returns the mask with the lowest score and a matrix with the mask applied.
-//pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
-    ////let masks = (0..8).map(|mask| apply_and_evaluate_mask(mask, matrix));
-    //// TODO get max
-    //for mask in 0..8 {
-        //let masked = 
-    //}
-//}
-
-/// Applies and evaluates mask.
-/// Returns the masking score and a matrix with the mask applied.
-fn apply_and_evaluate_mask(mask: usize, matrix: &Matrix) -> (u16, Matrix) {
-    let masked = apply_mask(mask, matrix);
-    (evaluate(&masked), masked)
-}
-
-/// Apply a mask of a specific type to a matrix.
-fn apply_mask(mask: usize, matrix: &Matrix) -> Matrix {
-    apply_mask_fun(mask_fun(mask), matrix)
-}
-
 fn apply_mask_fun(f: Box<Fn(usize, usize) -> bool>, matrix: &Matrix) -> Matrix {
     let mut res = matrix.clone();
     for y in 0..res.size {
@@ -207,10 +209,34 @@ mod tests {
     fn masking() {
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.build_until_masking("HELLO WORLD", &ECLevel::Q);
-        println!("{}", builder.to_string());
-        let mask1 = apply_mask(0, &builder.matrix);
-        println!("{}", render::to_string(&mask1));
-        assert!(false);
+        let (best_mask, best_matrix) = mask(&builder.matrix);
+        assert_eq!(best_mask, 6);
+        println!("{}", render::to_string(&best_matrix));
+
+        let output =
+"#######.###.#.#######
+#.....#.#.##..#.....#
+#.###.#.#.#...#.###.#
+#.###.#.#.....#.###.#
+#.###.#.#.#.#.#.###.#
+#.....#.#.##..#.....#
+#######.#.#.#.#######
+........#.#..........
+#########.##.########
+.#......####....#...#
+##.#.##.###.##..#####
+.#..#..##.#..###..###
+..#...#....#...#.....
+........####.##.#.###
+#######.#..##..##....
+#.....#.##.##.##.#...
+#.###.#.#.#.##.###...
+#.###.#.##...###.#.##
+#.###.#.#.####.####..
+#.....#.#..##...##..#
+#######.#.#.#######.#
+"; // Includes a newline at the end
+        assert_eq!(render::to_string(&best_matrix), output);
     }
 
     #[test]
