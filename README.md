@@ -10,6 +10,13 @@ Errors in the tutorial:
 # TODO
 
 * Debug why it isn't working
+* Add tests
+    * Module placements
+    * Reserved areas
+* Mask from usize to enum/struct, for type safety
+* Matrix refactoring
+    * Track types of modules, maybe even hide values in enums?
+
 * Create CLI
 * Render refactoring
     * Common type interface

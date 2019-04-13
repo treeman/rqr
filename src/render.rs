@@ -1,14 +1,54 @@
-use crate::matrix::Matrix;
+use crate::matrix::{Matrix, Module};
 
+//pub struct Renderer {
+    //quiet_zone: bool,
+//}
+
+//pub trait Renderer {
+    //fn quiet_zone(&mut self, v: bool);
+//}
+
+
+//pub struct StringRenderer {
+    //quiet_zone: bool,
+    
+//}
+
+// TODO
+// Set module size/dimensions
+// Set light/dark colors
+// Set quiet zone
 pub fn to_string(matrix: &Matrix) -> String {
     let mut res = String::with_capacity(matrix.size * matrix.size);
     for y in 0..matrix.size {
         let mut s = String::with_capacity(matrix.size + 1);
         for x in 0..matrix.size {
-            let c = if matrix.is_set(x, y) {
-                '.'
-            } else {
+            let c = if matrix.is_dark(x, y) {
                 '#'
+            } else {
+                '.'
+            };
+            s.push(c);
+        }
+        s.push('\n');
+        res.push_str(&s);
+    }
+    res
+}
+
+pub fn to_dbg_string(matrix: &Matrix) -> String {
+    let mut res = String::with_capacity(matrix.size * matrix.size);
+    res.push('\n');
+    for y in 0..matrix.size {
+        let mut s = String::with_capacity(matrix.size + 1);
+        for x in 0..matrix.size {
+            let c = match matrix.get(x, y) {
+                Module::Unknown => '?',
+                Module::Reserved => '*',
+                Module::Function(true) => '.',
+                Module::Function(false) => '#',
+                Module::Data(true) => ',',
+                Module::Data(false) => 'X',
             };
             s.push(c);
         }
@@ -32,7 +72,7 @@ pub fn to_svg(matrix: &Matrix) -> String {
 
     for y in 0..matrix.size {
         for x in 0..matrix.size {
-            if !matrix.is_set(x, y) {
+            if matrix.is_dark(x, y) {
                 res.push_str(format!("M{x} {y}h{w}v{h}H{x}V{y}",
                                      x = (x + 4) * cell_w,
                                      y = (y + 4) * cell_w,
@@ -47,18 +87,18 @@ pub fn to_svg(matrix: &Matrix) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::builder::QrBuilder;
-    use crate::version::Version;
-    use crate::ec::ECLevel;
+    //use super::*;
+    //use crate::builder::QrBuilder;
+    //use crate::version::Version;
+    //use crate::ec::ECLevel;
 
-    #[test]
-    fn tmp() {
-        let mut builder = QrBuilder::new(&Version::new(1));
-        builder.build("HELLO WORLD", &ECLevel::Q);
-        println!("{}", to_svg(&builder.matrix));
-        assert!(false);
-    }
+    //#[test]
+    //fn tmp() {
+        //let mut builder = QrBuilder::new(&Version::new(1));
+        //builder.build("HELLO WORLD", &ECLevel::Q);
+        //println!("{}", to_svg(&builder.matrix));
+        //assert!(false);
+    //}
 }
 
 

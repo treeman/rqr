@@ -127,12 +127,14 @@ fn bitvec_from_bin_str(s: &str) -> BitVec {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::data;
 
     #[test]
     fn ec_tutorial_example() {
         let ec_count = info::block_ec_count(&Version::new(1), &ECLevel::M);
         assert_eq!(ec_count, 10);
 
+        // HELLO WORLD as 1-M code
         let data: [u8; 16] = [0b00100000, 0b01011011, 0b00001011, 0b01111000, 0b11010001,
                               0b01110010, 0b11011100, 0b01001101, 0b01000011, 0b01000000,
                               0b11101100, 0b00010001, 0b11101100, 0b00010001, 0b11101100,
@@ -221,6 +223,26 @@ mod tests {
               10001100000010110010001001111000010110001101111011000000000");
         assert_eq!(add(bv, &Version::new(5), &ECLevel::Q).len(),
                    expected.len());
+    }
+
+    #[test]
+    fn add_simple() {
+        // For smaller versions data should simply be followed by ec data.
+        let version = Version::new(1);
+        let ecl = ECLevel::Q;
+
+        let mut data: BitVec = data::encode("HELLO WORLD", &version, &ecl);
+
+        let ec_count = info::block_ec_count(&version, &ecl);
+        let mut ec_data: BitVec = generate_ec_codewords(data.as_slice(), ec_count).into();
+        let ec = add(data.clone(), &version, &ecl);
+
+        assert_eq!(ec.len(), data.len() + ec_data.len());
+
+        let mut res: BitVec = BitVec::new();
+        res.append(&mut data);
+        res.append(&mut ec_data);
+        assert_eq!(ec, res);
     }
 }
 
