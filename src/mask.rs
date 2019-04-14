@@ -207,51 +207,50 @@ mod tests {
     use crate::ec::ECLevel;
     use crate::render;
 
-    //#[test]
-    //fn masking() {
-        //let mut builder = QrBuilder::new(&Version::new(1));
-        //builder.build_until_masking("HELLO WORLD", &ECLevel::Q);
-        //let (best_mask, best_matrix) = mask(&builder.matrix);
-        //assert_eq!(best_mask, 6);
-        //println!("{}", render::to_string(&best_matrix));
+    #[test]
+    fn apply_mask() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.add_fun_patterns();
+        builder.add_raw_data(&bitvec![1; 208]);
+        builder.mask_with(0);
 
-        //let output =
-//"#######.###.#.#######
-//#.....#.#.##..#.....#
-//#.###.#.#.#...#.###.#
-//#.###.#.#.....#.###.#
-//#.###.#.#.#.#.#.###.#
-//#.....#.#.##..#.....#
-//#######.#.#.#.#######
-//........#.#..........
-//#########.##.########
-//.#......####....#...#
-//##.#.##.###.##..#####
-//.#..#..##.#..###..###
-//..#...#....#...#.....
-//........####.##.#.###
-//#######.#..##..##....
-//#.....#.##.##.##.#...
-//#.###.#.#.#.##.###...
-//#.###.#.##...###.#.##
-//#.###.#.#.####.####..
-//#.....#.#..##...##..#
-//#######.#.#.#######.#
-//"; // Includes a newline at the end
-        //assert_eq!(render::to_string(&best_matrix), output);
-    //}
+        let expected = "
+#######.*X-X-.#######
+#.....#.*-X-X.#.....#
+#.###.#.*X-X-.#.###.#
+#.###.#.*-X-X.#.###.#
+#.###.#.*X-X-.#.###.#
+#.....#.*-X-X.#.....#
+#######.#.#.#.#######
+........*-X-X........
+******#**X-X-********
+X-X-X-.-X-X-X-X-X-X-X
+-X-X-X#X-X-X-X-X-X-X-
+X-X-X-.-X-X-X-X-X-X-X
+-X-X-X#X-X-X-X-X-X-X-
+........#-X-X-X-X-X-X
+#######.*X-X-X-X-X-X-
+#.....#.*-X-X-X-X-X-X
+#.###.#.*X-X-X-X-X-X-
+#.###.#.*-X-X-X-X-X-X
+#.###.#.*X-X-X-X-X-X-
+#.....#.*-X-X-X-X-X-X
+#######.*X-X-X-X-X-X-
+";
+        //println!("{}", builder.to_dbg_string());
+        assert_eq!(builder.to_dbg_string(), expected);
+    }
 
     #[test]
     fn mask_evaluation() {
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.add_fun_patterns();
         builder.add_data("HELLO WORLD", &ECLevel::Q);
-        println!("{}", builder.to_string());
-        assert_eq!(evaluate_5_in_line(&builder.matrix), 211);
-        assert_eq!(evaluate_2x2(&builder.matrix), 135);
+        assert_eq!(evaluate_5_in_line(&builder.matrix), 205);
+        assert_eq!(evaluate_2x2(&builder.matrix), 201);
         assert_eq!(evaluate_dl_pattern(&builder.matrix), 80);
-        assert_eq!(evaluate_bw(&builder.matrix), 10);
-        assert_eq!(evaluate(&builder.matrix), 436);
+        assert_eq!(evaluate_bw(&builder.matrix), 0);
+        assert_eq!(evaluate(&builder.matrix), 486);
     }
 }
 

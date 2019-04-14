@@ -25,12 +25,13 @@ impl QrBuilder {
         }
     }
 
-    //pub fn finalize(&mut self, s: &str, ecl: &ECLevel) {
-        //self.add_fun_patterns();
-        //self.add_data(s, ecl);
-        //self.mask();
-        //self.add_info(ecl);
-    //}
+    pub fn build(&mut self, s: &str, ecl: &ECLevel) {
+        self.add_fun_patterns();
+        self.add_data(s, ecl);
+        self.mask();
+        self.add_format_info(ecl);
+        self.add_version_info();
+    }
 
     /// Add function patterns.
     pub fn add_fun_patterns(&mut self) {
@@ -39,6 +40,25 @@ impl QrBuilder {
         self.add_timing_patterns();
         self.add_dark_module();
         self.add_reserved_areas();
+    }
+
+    /// Add data.
+    pub fn add_data(&mut self, s: &str, ecl: &ECLevel) {
+        let v = data::encode(s, &self.version, ecl);
+        let v = ec::add(v, &self.version, ecl);
+        self.add_raw_data(&v);
+    }
+
+    /// Add raw data.
+    pub fn add_raw_data(&mut self, v: &BitVec) {
+        let mut vi = 0;
+        for (x, y) in ZigZagIt::new(self.matrix.size) {
+            if self.matrix.is_fun(x, y) { continue; }
+            self.matrix.set_data(x, y, v[vi]);
+            vi += 1;
+        }
+        println!("len {}", v.len());
+        assert_eq!(vi, v.len());
     }
 
     /// Apply mask.
@@ -53,20 +73,6 @@ impl QrBuilder {
         assert!(m <= 7);
         self.mask = Some(m);
         self.matrix = mask::apply_mask(m, &self.matrix);
-    }
-
-    /// Add data.
-    pub fn add_data(&mut self, s: &str, ecl: &ECLevel) {
-        let v = data::encode(s, &self.version, ecl);
-        let v = ec::add(v, &self.version, ecl);
-
-        let mut v_i = 0;
-        for (x, y) in ZigZagIt::new(self.matrix.size) {
-            if self.matrix.is_fun(x, y) { continue; }
-            self.matrix.set_data(x, y, v[v_i]);
-            v_i += 1;
-        }
-        assert_eq!(v_i, v.len());
     }
 
     /// Add format info.
@@ -100,14 +106,14 @@ impl QrBuilder {
 
     // x and y specifies the top left corner
     fn add_finder(&mut self, x: usize, y: usize) {
-        self.matrix.set_square(x, y, 7, Module::Function(false));
-        self.matrix.set_square_outline(x + 1, y + 1, 5, Module::Function(true));
+        self.matrix.set_square(x, y, 7, Module::Function(true));
+        self.matrix.set_square_outline(x + 1, y + 1, 5, Module::Function(false));
     }
 
     fn add_separator(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
         for a in x0..x1 + 1 {
             for b in y0..y1 + 1 {
-                self.matrix.set(a, b, Module::Function(true));
+                self.matrix.set(a, b, Module::Function(false));
             }
         }
     }
@@ -126,15 +132,15 @@ impl QrBuilder {
         let x = cx - 2;
         let y = cy - 2;
         if !self.matrix.any_in_square(x, y, 4) {
-            self.matrix.set_square(x, y, 5, Module::Function(false));
-            self.matrix.set_square_outline(x + 1, y + 1, 3, Module::Function(true));
+            self.matrix.set_square(x, y, 5, Module::Function(true));
+            self.matrix.set_square_outline(x + 1, y + 1, 3, Module::Function(false));
         }
     }
 
     fn add_timing_patterns(&mut self) {
         let offset = 6;
         for i in offset..self.matrix.size - offset {
-            let v = i % 2 == 1;
+            let v = i % 2 == 0;
             self.set_timing(i, offset, v);
             self.set_timing(offset, i, v);
         }
@@ -143,7 +149,7 @@ impl QrBuilder {
     fn set_timing(&mut self, x: usize, y: usize, v: bool) {
         // Timing patterns should always overlap with finders and alignment modules.
         if self.matrix.is_fun(x, y) {
-            assert_eq!(!self.matrix.is_dark(x, y), v, "timing overlap {},{}", x, y);
+            assert_eq!(self.matrix.is_dark(x, y), v, "timing overlap {},{}", x, y);
         }
 
         self.matrix.set(x, y, Module::Function(v));
@@ -151,7 +157,7 @@ impl QrBuilder {
 
     fn add_dark_module(&mut self) {
         let (x, y) = self.version.dark_module_pos();
-        self.matrix.set(x, y, Module::Function(false));
+        self.matrix.set(x, y, Module::Function(true));
     }
 
     fn add_reserved_areas(&mut self) {
@@ -353,6 +359,7 @@ mod tests {
 #.....#.?????????????
 #######.?????????????
 ";
+        println!("{}", builder.to_dbg_string());
         assert_eq!(builder.to_dbg_string(), expected);
     }
 
@@ -360,7 +367,7 @@ mod tests {
     fn fun_patterns() {
         let mut builder = QrBuilder::new(&Version::new(3));
         builder.add_fun_patterns();
-        //println!("{}", builder.to_dbg_string());
+        println!("{}", builder.to_dbg_string());
         let expected = "
 #######.*????????????.#######
 #.....#.*????????????.#.....#
@@ -368,9 +375,9 @@ mod tests {
 #.###.#.*????????????.#.###.#
 #.###.#.*????????????.#.###.#
 #.....#.*????????????.#.....#
-#######.*.#.#.#.#.#.#.#######
+#######.#.#.#.#.#.#.#.#######
 ........*????????????........
-*********????????????********
+******#**????????????********
 ??????.??????????????????????
 ??????#??????????????????????
 ??????.??????????????????????
@@ -383,7 +390,7 @@ mod tests {
 ??????#??????????????????????
 ??????.??????????????????????
 ??????#?????????????#####????
-........*???????????#...#????
+........#???????????#...#????
 #######.*???????????#.#.#????
 #.....#.*???????????#...#????
 #.###.#.*???????????#####????
@@ -463,157 +470,139 @@ mod tests {
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.add_fun_patterns();
         builder.add_data("HELLO WORLD", &ECLevel::Q);
-        let expected =
-"#######.#..#..#######
-#.....#.#.###.#.....#
-#.###.#.##..#.#.###.#
-#.###.#.#.#.#.#.###.#
-#.###.#.####..#.###.#
-#.....#.#...#.#.....#
+        println!("{}", builder.to_dbg_string());
+        let expected = "
+#######.*XX-X.#######
+#.....#.*X---.#.....#
+#.###.#.*-XX-.#.###.#
+#.###.#.*X-X-.#.###.#
+#.###.#.*---X.#.###.#
+#.....#.*XXX-.#.....#
 #######.#.#.#.#######
-........#.#.#........
-##########.##########
-###.#....#.##.#...#..
-.##...#...##.####..#.
-##...#.##..#######.##
-##.########.###.#####
-........#####...#....
-#######.####.#....##.
-#.....#.####...####.#
-#.###.#.####.##.#.#.#
-#.###.#.#########.###
-#.###.#.##....#....##
-#.....#.#..#.##.####.
-#######.##....#..#.##
-"; // Includes a newline at the end
-        assert_eq!(builder.to_string(), expected);
+........*X-X-........
+******#**-X--********
+---X-X.XX-X--X-XXX-XX
+X--XXX#XXX--X----XX-X
+--XXX-.--XX-------X--
+--X---#----X---X-----
+........#----XXX-XXXX
+#######.*---X-XXXX--X
+#.....#.*---XXX----X-
+#.###.#.*---X--X-X-X-
+#.###.#.*--------X---
+#.###.#.*-XXXX-XXXX--
+#.....#.*XX-X--X----X
+#######.*-XXXX-XX-X--
+";
+        assert_eq!(builder.to_dbg_string(), expected);
     }
 
     #[test]
-    fn apply_mask() {
-        let mut builder = QrBuilder::new(&Version::new(1));
+    fn add_data() {
+        let mut builder = QrBuilder::new(&Version::new(2));
         builder.add_fun_patterns();
-        builder.mask_with(0);
-        println!("{}", builder.to_string());
-        assert!(false);
+        let mut bv: BitVec = BitVec::new();
+        for i in 0..359 {
+            bv.push(i % 2 == 0);
+        }
+        builder.add_raw_data(&bv);
+
+        let expected = "
+#######.*X-X-X-X-.#######
+#.....#.*X-X-X-X-.#.....#
+#.###.#.*X-X-X-X-.#.###.#
+#.###.#.*X-X-X-X-.#.###.#
+#.###.#.*X-X-X-X-.#.###.#
+#.....#.*X-X-X-X-.#.....#
+#######.#.#.#.#.#.#######
+........*X-X-X-X-........
+******#**X-X-X-X-********
+X-X-X-.X-X-X-X-X--X-X-X-X
+X-X-X-#X-X-X-X-X--X-X-X-X
+X-X-X-.X-X-X-X-X--X-X-X-X
+X-X-X-#X-X-X-X-X--X-X-X-X
+X-X-X-.X-X-X-X-X--X-X-X-X
+X-X-X-#X-X-X-X-X--X-X-X-X
+X-X-X-.X-X-X-X-X--X-X-X-X
+X-X-X-#X-X-X-X-X#####-X-X
+........#X-X-X--#...#-X-X
+#######.*X-X-X-X#.#.#-X-X
+#.....#.*X-X-X--#...#-X-X
+#.###.#.*X-X-X-X#####-X-X
+#.###.#.*X-X-X--X-X-X-X-X
+#.###.#.*X-X-X--X-X-X-X-X
+#.....#.*X-X-X--X-X-X-X-X
+#######.*X-X-X--X-X-X-X-X
+";
+        //println!("{}", builder.to_dbg_string());
+        assert_eq!(builder.to_dbg_string(), expected);
     }
 
-    //#[test]
-    //fn before_masking2() {
-        //let mut builder = QrBuilder::new(&Version::new(1));
-        //builder.build_until_masking("HELLO WORLD", &ECLevel::L);
-        //let expected =
-//"#######.#..#..#######
-//#.....#.#.###.#.....#
-//#.###.#.##..#.#.###.#
-//#.###.#.#.#.#.#.###.#
-//#.###.#.####..#.###.#
-//#.....#.#...#.#.....#
-//#######.#.#.#.#######
-//........#.#.#........
-//##########.##########
-//###.#....#.##.#...#..
-//.##...#...##.####..#.
-//##...#.##..#######.##
-//##.########.###.#####
-//........#####...#....
-//#######.####.#....##.
-//#.....#.####...####.#
-//#.###.#.####.##.#.#.#
-//#.###.#.#########.###
-//#.###.#.##....#....##
-//#.....#.#..#.##.####.
-//#######.##....#..#.##
-//"; // Includes a newline at the end
-        //let s = builder.to_string();
-        //println!("{}", s);
-        //assert_eq!(s, expected);
-    //}
+    // QR code example: mask 6, Q, version info 0b010111011011010
+    #[test]
+    fn format_info() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        //builder.mask = Some(6);
+        //builder.add_format_info(&ECLevel::Q);
+        // Mask 6, ECLevel Q
+        builder.add_format(&bitvec![0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0]);
+        let expected = "
+????????.????????????
+????????#????????????
+????????.????????????
+????????#????????????
+????????#????????????
+????????.????????????
+?????????????????????
+????????#????????????
+.#.###?.#????##.##.#.
+?????????????????????
+?????????????????????
+?????????????????????
+?????????????????????
+?????????????????????
+????????.????????????
+????????#????????????
+????????#????????????
+????????#????????????
+????????.????????????
+????????#????????????
+????????.????????????
+";
+        //println!("{}", builder.to_dbg_string());
+        assert_eq!(builder.to_dbg_string(), expected);
+    }
 
-    //#[test]
-    //fn build_v1() {
-        //let mut builder = QrBuilder::new(&Version::new(1));
-        //builder.build("HELLO WORLD", &ECLevel::Q);
-        //println!("{}", builder.to_string());
-        //let expected = 
-//"#######.###.#.#######
-//#.....#...##..#.....#
-//#.###.#.#.#...#.###.#
-//#.###.#.......#.###.#
-//#.###.#...#.#.#.###.#
-//#.....#.#.##..#.....#
-//#######.#.#.#.#######
-//..........#..........
-//#.#...##..##...#..#.#
-//.#......####....#...#
-//##.#.##.###.##..#####
-//.#..#..##.#..###..###
-//..#...#....#...#.....
-//........####.##.#.###
-//#######.#..##..##....
-//#.....#..#.##.##.#...
-//#.###.#...#.##.###...
-//#.###.#..#...###.#.##
-//#.###.#.#.####.####..
-//#.....#....##...##..#
-//#######.#.#.#######.#
-//";
-        //assert_eq!(builder.to_string(), expected);
-    //}
-
-    //#[test]
-    //fn build_v7() {
-        //let mut builder = QrBuilder::new(&Version::new(7));
-        //builder.build("HELLO WORLD", &ECLevel::Q);
-        //let expected = 
-//"#######.###...#..##.....#.#..#.##.###.#######
-//#.....#.####.#.#.#.#.###.###..#.##....#.....#
-//#.###.#..#..##.#..#..###.#.#.#.#....#.#.###.#
-//#.###.#.#.#.#..#.#...#.#.###.###.##.#.#.###.#
-//#.###.#...###.####..#####.#...#..##.#.#.###.#
-//#.....#....###.#.##.#...##.#.#.#...##.#.....#
-//#######.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#######
-//........####..#.#####...##...#...#.#.........
-//#.##.###..#..##...#######..#...#...#..#..#.##
-//..##....######.#..##.#.#..###.###.##.#.##.###
-//..#.#.#..........#.###.#.#..##..##.....#.##.#
-//..###..##.##.....#.##..#.#.###..##.#..#.#.###
-//.###.##..#.###.#...#.....###.##.####....#.##.
-//..####..##..#####.#...##..#...###.#.##.##.#..
-//##.##.#.###.###.######..####.##.#####.#.####.
-//#.##...##.....###...#####.###.###..#..####.##
-//#.###.##.#.##.#.....###..##.###.##..###.#...#
-//..###..######.#.####.#.#..###.###.##..###.##.
-//##.######.####.##.#...#.#.##..##.##...##...##
-//#...##...#..####..#.###.#.#...#...#.#.##.#...
-//.##############.#..#########.###.########.#..
-//....#...####.#.#.#.##...##.###.###..#...##.##
-//###.#.#.##.#..###...#.#.#...#...#..##.#.##..#
-//#####...##...#......#...#.#.##..##.##...#####
-//....#####...##.###########..####.#########.#.
-//...###.........#...#.....#.##.##..#.###.##.#.
-//#######.##.#.#.###..#.##..#.###..##.#.###...#
-//.#...#.#.####...#.....##...###.##.#.#..#..#..
-//#.....###.###..#..##.######.#...###...####.#.
-//..#.#..#..#.##.#..#..##..#.###.##.#.###.#.###
-//...#.##..###.#...#####..##.#.###..##.#.....#.
-//....##.###..#.####.##.##..##..##..###.##.#...
-//...####.###.##..##...#..#...###.###...#...##.
-//####...#.....###.######.#....#...#.#....##..#
-//#..##.#.#.#.#.....###..#...#...#...#.#.##..#.
-//#....#..######.#.#.#.##..#..#.###.#.#...##...
-//#.########.#.#..###.#####.#.#..#...########.#
-//........##...##.###.#...#..###...#..#...##.#.
-//#######.#######.##.##.#.#.#.#.##..###.#.#...#
-//#.....#.#.#..##.#..##...##..##..#...#...#.#..
-//#.###.#....#...###..########...#.#..######.#.
-//#.###.#.#....##.#..##..##....#...#.##...##..#
-//#.###.#.##.#.....#..#.#.###.###.##.#.#.#####.
-//#.....#...#.....#.####.#..##.#.#.#....#.#.###
-//#######.#.##.##..####..##.#.#...#..#.....###.
-//";
-        //assert_eq!(builder.to_string(), expected);
-    //}
+    #[test]
+    fn hello_world() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.build("HELLO WORLD", &ECLevel::Q);
+        let expected = "
+#######..--X-.#######
+#.....#.#X--X.#.....#
+#.###.#..X-XX.#.###.#
+#.###.#.#XXXX.#.###.#
+#.###.#.#X-X-.#.###.#
+#.....#..X--X.#.....#
+#######.#.#.#.#######
+........#X-XX........
+.#.####.#X--X##.##.#.
+X-XXXX.X----XXXX-XXX-
+--X-X-#X---X--XX-----
+X-XX-X.--X-XX---XX---
+XX-XXX#XXXX-XXX-XXXXX
+........#---X--X-X---
+#######..XX--XX--XXXX
+#.....#.#-X--X--X-XXX
+#.###.#.#X-X--X---XXX
+#.###.#.#-XXX---X-X--
+#.###.#..X----X----XX
+#.....#.#XX--XXX--XX-
+#######..X-X-------X-
+";
+        //println!("{}", builder.to_dbg_string());
+        assert_eq!(builder.to_dbg_string(), expected);
+    }
 }
 
 static ALIGNMENT_LOCATIONS: [&[usize]; 40] = [

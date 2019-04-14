@@ -45,10 +45,10 @@ pub fn to_dbg_string(matrix: &Matrix) -> String {
             let c = match matrix.get(x, y) {
                 Module::Unknown => '?',
                 Module::Reserved => '*',
-                Module::Function(true) => '.',
-                Module::Function(false) => '#',
-                Module::Data(true) => ',',
-                Module::Data(false) => 'X',
+                Module::Function(true) => '#',
+                Module::Function(false) => '.',
+                Module::Data(true) => 'X',
+                Module::Data(false) => '-',
             };
             s.push(c);
         }
@@ -87,18 +87,18 @@ pub fn to_svg(matrix: &Matrix) -> String {
 
 #[cfg(test)]
 mod tests {
-    //use super::*;
-    //use crate::builder::QrBuilder;
-    //use crate::version::Version;
-    //use crate::ec::ECLevel;
+    use super::*;
+    use crate::builder::QrBuilder;
+    use crate::version::Version;
+    use crate::ec::ECLevel;
 
-    //#[test]
-    //fn tmp() {
-        //let mut builder = QrBuilder::new(&Version::new(1));
-        //builder.build("HELLO WORLD", &ECLevel::Q);
-        //println!("{}", to_svg(&builder.matrix));
-        //assert!(false);
-    //}
+    #[test]
+    fn tmp() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.build("HELLO WORLD", &ECLevel::Q);
+        println!("{}", to_svg(&builder.matrix));
+        assert!(false);
+    }
 }
 
 
