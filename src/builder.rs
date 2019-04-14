@@ -466,39 +466,7 @@ mod tests {
     }
 
     #[test]
-    fn before_masking() {
-        let mut builder = QrBuilder::new(&Version::new(1));
-        builder.add_fun_patterns();
-        builder.add_data("HELLO WORLD", &ECLevel::Q);
-        println!("{}", builder.to_dbg_string());
-        let expected = "
-#######.*XX-X.#######
-#.....#.*X---.#.....#
-#.###.#.*-XX-.#.###.#
-#.###.#.*X-X-.#.###.#
-#.###.#.*---X.#.###.#
-#.....#.*XXX-.#.....#
-#######.#.#.#.#######
-........*X-X-........
-******#**-X--********
----X-X.XX-X--X-XXX-XX
-X--XXX#XXX--X----XX-X
---XXX-.--XX-------X--
---X---#----X---X-----
-........#----XXX-XXXX
-#######.*---X-XXXX--X
-#.....#.*---XXX----X-
-#.###.#.*---X--X-X-X-
-#.###.#.*--------X---
-#.###.#.*-XXXX-XXXX--
-#.....#.*XX-X--X----X
-#######.*-XXXX-XX-X--
-";
-        assert_eq!(builder.to_dbg_string(), expected);
-    }
-
-    #[test]
-    fn add_data() {
+    fn add_raw_data() {
         let mut builder = QrBuilder::new(&Version::new(2));
         builder.add_fun_patterns();
         let mut bv: BitVec = BitVec::new();
@@ -538,12 +506,41 @@ X-X-X-#X-X-X-X-X#####-X-X
         assert_eq!(builder.to_dbg_string(), expected);
     }
 
-    // QR code example: mask 6, Q, version info 0b010111011011010
+    #[test]
+    fn add_data() {
+        let mut builder = QrBuilder::new(&Version::new(1));
+        builder.add_fun_patterns();
+        builder.add_data("HELLO WORLD", &ECLevel::Q);
+        //println!("{}", builder.to_dbg_string());
+        let expected = "
+#######.*XX-X.#######
+#.....#.*X---.#.....#
+#.###.#.*-XX-.#.###.#
+#.###.#.*X-X-.#.###.#
+#.###.#.*---X.#.###.#
+#.....#.*XXX-.#.....#
+#######.#.#.#.#######
+........*X-X-........
+******#**-X--********
+---X-X.XX-X--X-XXX-XX
+X--XXX#XXX--X----XX-X
+--XXX-.--XX-------X--
+--X---#----X---X-----
+........#----XXX-XXXX
+#######.*---X-XXXX--X
+#.....#.*---XXX----X-
+#.###.#.*---X--X-X-X-
+#.###.#.*--------X---
+#.###.#.*-XXXX-XXXX--
+#.....#.*XX-X--X----X
+#######.*-XXXX-XX-X--
+";
+        assert_eq!(builder.to_dbg_string(), expected);
+    }
+
     #[test]
     fn format_info() {
         let mut builder = QrBuilder::new(&Version::new(1));
-        //builder.mask = Some(6);
-        //builder.add_format_info(&ECLevel::Q);
         // Mask 6, ECLevel Q
         builder.add_format(&bitvec![0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0]);
         let expected = "
@@ -575,6 +572,7 @@ X-X-X-#X-X-X-X-X#####-X-X
 
     #[test]
     fn hello_world() {
+        // Builds a final QR code which should be scannable.
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.build("HELLO WORLD", &ECLevel::Q);
         let expected = "
