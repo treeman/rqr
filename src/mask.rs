@@ -246,11 +246,11 @@ X-X-X-.-X-X-X-X-X-X-X
         let mut builder = QrBuilder::new(&Version::new(1));
         builder.add_fun_patterns();
         builder.add_data("HELLO WORLD", &ECLevel::Q);
-        assert_eq!(evaluate_5_in_line(&builder.matrix), 205);
-        assert_eq!(evaluate_2x2(&builder.matrix), 201);
-        assert_eq!(evaluate_dl_pattern(&builder.matrix), 80);
-        assert_eq!(evaluate_bw(&builder.matrix), 0);
-        assert_eq!(evaluate(&builder.matrix), 486);
+        assert_eq!(evaluate_5_in_line(&builder.matrix), 216);
+        assert_eq!(evaluate_2x2(&builder.matrix), 219);
+        assert_eq!(evaluate_dl_pattern(&builder.matrix), 160);
+        assert_eq!(evaluate_bw(&builder.matrix), 10);
+        assert_eq!(evaluate(&builder.matrix), 605);
     }
 }
 
