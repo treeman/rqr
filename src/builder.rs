@@ -3,9 +3,11 @@ use crate::ec::ECLevel;
 use crate::ec;
 use crate::info;
 use crate::mask;
+use crate::mode::Mode;
 use crate::matrix::{Matrix, Module};
 use crate::render;
 use crate::version::Version;
+use crate::qr::Qr;
 
 use bitvec::*;
 
@@ -14,6 +16,8 @@ pub struct QrBuilder {
     pub version: Version,
     pub matrix: Matrix,
     pub mask: Option<usize>,
+    pub ecl: Option<ECLevel>,
+    pub mode: Option<Mode>,
 }
 
 impl QrBuilder {
@@ -22,14 +26,29 @@ impl QrBuilder {
             version: (*v).clone(),
             matrix: Matrix::new(v.size()),
             mask: None,
+            ecl: None,
+            mode: None,
         }
     }
 
-    pub fn build(&mut self, s: &str, ecl: &ECLevel) {
+    /// Build all elements and generate a QR code.
+    pub fn build_qr(mut self, s: &str, ecl: &ECLevel) -> Qr {
+        self.build_all(s, ecl);
+        Qr {
+            version: self.version,
+            matrix: self.matrix,
+            ecl: self.ecl.unwrap(),
+            mode: self.mode.unwrap(),
+            mask: self.mask.unwrap(),
+        }
+    }
+
+    /// Build all elements of a QR code.
+    pub fn build_all(&mut self, s: &str, ecl: &ECLevel) {
         self.add_fun_patterns();
         self.add_data(s, ecl);
         self.mask();
-        self.add_format_info(ecl);
+        self.add_format_info();
         self.add_version_info();
     }
 
@@ -44,7 +63,11 @@ impl QrBuilder {
 
     /// Add data.
     pub fn add_data(&mut self, s: &str, ecl: &ECLevel) {
-        let v = data::encode(s, &self.version, ecl);
+        self.ecl = Some(*ecl);
+
+        let (mode, v) = data::encode(s, &self.version, ecl);
+        self.mode = Some(mode);
+
         let v = ec::add(v, &self.version, ecl);
         self.add_raw_data(&v);
     }
@@ -75,8 +98,9 @@ impl QrBuilder {
     }
 
     /// Add format info.
-    pub fn add_format_info(&mut self, ecl: &ECLevel) {
-        let format = info::format_info(ecl, self.mask.unwrap());
+    pub fn add_format_info(&mut self) {
+        // Hard assumption that we have necessary data.
+        let format = info::format_info(&self.ecl.unwrap(), self.mask.unwrap());
         self.add_format(&format);
     }
 
@@ -573,7 +597,7 @@ X--XXX#XXX--X----XX-X
     fn hello_world() {
         // Builds a final QR code which should be scannable.
         let mut builder = QrBuilder::new(&Version::new(1));
-        builder.build("HELLO WORLD", &ECLevel::Q);
+        builder.build_all("HELLO WORLD", &ECLevel::Q);
         let expected = "
 #######..--X-.#######
 #.....#.#X--X.#.....#

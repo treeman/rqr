@@ -8,9 +8,10 @@ use std::cmp;
 
 /// Encode string data to BitVec.
 /// Does not include error correction codes, it only encodes the data portion.
-pub fn encode(s: &str, version: &Version, ecl: &ECLevel) -> BitVec {
+pub fn encode(s: &str, version: &Version, ecl: &ECLevel) -> (Mode, BitVec) {
     let mode = Mode::from_str(s);
-    encode_with_mode(s, &mode, version, ecl)
+    let encoded = encode_with_mode(s, &mode, version, ecl);
+    (mode, encoded)
 }
 
 /// Encode string data to BitVec in a specific mode.
@@ -214,8 +215,8 @@ mod tests {
                                      0b01000011, 0b01000000,
                                      // Three padding bytes
                                      0b11101100, 0b00010001, 0b11101100].into();
-        assert_eq!(encode("HELLO WORLD", &Version::new(1), &ECLevel::Q),
-                   hello_res);
+        let (_, encoded) = encode("HELLO WORLD", &Version::new(1), &ECLevel::Q);
+        assert_eq!(encoded, hello_res);
     }
 
     #[test]

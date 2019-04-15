@@ -14,7 +14,8 @@ Minor improvements suggestions:
 
 # TODO
 
-* Mask from usize to enum/struct, for type safety
+* Qr API, hide builder.
+* Calculate minimal version
 * Create CLI
 * Calculate the minimal applicable version
   Move it after encoding data? To avoid having to include a big table.

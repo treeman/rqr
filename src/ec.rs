@@ -231,7 +231,7 @@ mod tests {
         let version = Version::new(1);
         let ecl = ECLevel::Q;
 
-        let mut data: BitVec = data::encode("HELLO WORLD", &version, &ecl);
+        let (_, mut data) = data::encode("HELLO WORLD", &version, &ecl);
 
         let ec_count = info::block_ec_count(&version, &ecl);
         let mut ec_data: BitVec = generate_ec_codewords(data.as_slice(), ec_count).into();
