@@ -57,7 +57,6 @@ impl QrBuilder {
             self.matrix.set_data(x, y, v[vi]);
             vi += 1;
         }
-        println!("len {}", v.len());
         assert_eq!(vi, v.len());
     }
 
