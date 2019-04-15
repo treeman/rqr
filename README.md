@@ -15,10 +15,6 @@ Minor improvements suggestions:
 # TODO
 
 * Mask from usize to enum/struct, for type safety
-* Render refactoring
-    1. Specify chars for string output
-    2. Specify dark/light colors for svg output
-    3. Set module width/dimensions
 * Create CLI
 * Calculate the minimal applicable version
   Move it after encoding data? To avoid having to include a big table.

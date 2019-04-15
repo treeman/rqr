@@ -4,8 +4,6 @@ use bitvec::*;
 use std::cmp;
 use lazy_static::lazy_static;
 
-// TODO change mask from usize to enum
-
 /// Evaluates masks.
 /// Returns the mask with the lowest score and a matrix with the mask applied.
 pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
@@ -139,10 +137,9 @@ lazy_static! {
     // Dark/light patterns we should detect.
     // BitVec can't be initialized in lazy_static so we'll use a standard Vec.
     // Convert to bool once here to make later comparisons simpler.
-    // 0 is dark
-    static ref DLP1: Vec<bool> = [1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0]
+    static ref DLP1: Vec<bool> = [0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1]
         .iter().map(|x| *x == 1).collect();
-    static ref DLP2: Vec<bool> = [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1]
+    static ref DLP2: Vec<bool> = [1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0]
         .iter().map(|x| *x == 1).collect();
 }
 
@@ -205,7 +202,6 @@ mod tests {
     use crate::builder::QrBuilder;
     use crate::version::Version;
     use crate::ec::ECLevel;
-    use crate::render;
 
     #[test]
     fn apply_mask() {
@@ -248,9 +244,9 @@ X-X-X-.-X-X-X-X-X-X-X
         builder.add_data("HELLO WORLD", &ECLevel::Q);
         assert_eq!(evaluate_5_in_line(&builder.matrix), 216);
         assert_eq!(evaluate_2x2(&builder.matrix), 219);
-        assert_eq!(evaluate_dl_pattern(&builder.matrix), 160);
+        assert_eq!(evaluate_dl_pattern(&builder.matrix), 0);
         assert_eq!(evaluate_bw(&builder.matrix), 10);
-        assert_eq!(evaluate(&builder.matrix), 605);
+        assert_eq!(evaluate(&builder.matrix), 445);
     }
 }
 

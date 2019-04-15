@@ -97,7 +97,6 @@ impl StringRenderer {
     }
 }
 
-
 /// Convert to string, with chars for the different underlying representations.
 pub fn to_dbg_string(matrix: &Matrix) -> String {
     let mut res = String::with_capacity(matrix.size * matrix.size);
