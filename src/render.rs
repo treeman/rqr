@@ -1,6 +1,10 @@
 use crate::matrix::{Matrix, Module};
 use crate::qr::Qr;
 
+use std::str::FromStr;
+use std::num::ParseIntError;
+use std::u8;
+
 pub struct StringRenderer {
     light: char,
     dark: char,
@@ -146,8 +150,58 @@ impl Color {
         }
     }
 
+    pub fn from_4_hex(s: &str) -> Result<Self, ParseColorError> {
+        let chars: Vec<char> = s.chars().collect();
+        if chars[0] != '#' {
+            return Err(ParseColorError);
+        }
+        let r = u8::from_str_radix(&chars[1].to_string(), 16)?;
+        let g = u8::from_str_radix(&chars[2].to_string(), 16)?;
+        let b = u8::from_str_radix(&chars[3].to_string(), 16)?;
+        Ok(Color {
+            r: (r << 4) | r,
+            g: (g << 4) | g,
+            b: (b << 4) | b
+        })
+    }
+
+    pub fn from_7_hex(s: &str) -> Result<Self, ParseColorError> {
+        if s[0..1] != *"#" {
+            return Err(ParseColorError);
+        }
+        let r = u8::from_str_radix(&s[1..3], 16)?;
+        let g = u8::from_str_radix(&s[3..5], 16)?;
+        let b = u8::from_str_radix(&s[5..7], 16)?;
+        Ok(Color {
+            r,
+            g,
+            b
+        })
+    }
+
     pub fn to_hex_str(&self) -> String {
         String::from(format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ParseColorError;
+
+impl FromStr for Color {
+    type Err = ParseColorError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.len() {
+            4 => Color::from_4_hex(s),
+            7 => Color::from_7_hex(s),
+            _ => Err(ParseColorError),
+        }
+    }
+
+}
+
+impl From <ParseIntError> for ParseColorError {
+    fn from(_: ParseIntError) -> Self {
+        ParseColorError
     }
 }
 
@@ -311,6 +365,11 @@ XXXXXXXXXXXXXX~~~~XX~~XX~~~~~~~~~~~~~~XX~~
         assert_eq!(Color::new(255, 100, 32), Color::hex(0xff6420));
         assert_eq!(Color::hex(0xff6420).to_hex_str(), "#ff6420");
         assert_eq!(Color::new(255, 0, 0).to_hex_str(), "#ff0000");
+        assert_eq!("#f92".parse::<Color>().unwrap(),
+                   Color::hex(0xff9922));
+        assert_eq!("#f1a293".parse::<Color>().unwrap(),
+                   Color::hex(0xf1a293));
+        assert!("#ooo".parse::<Color>().is_err())
     }
 }
 
