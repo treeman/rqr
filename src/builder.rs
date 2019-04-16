@@ -21,7 +21,7 @@ pub struct QrBuilder {
     pub mode: Option<Mode>,
 
     // Resulting matrix.
-    pub matrix: Option<Matrix>,
+    pub matrix: Matrix,
 
     // Build status.
     has_fun_patterns: bool,
@@ -168,19 +168,6 @@ impl QrBuilder {
             self.add_version(&v);
         }
     }
-
-    // Get the matrix, construct it if it doesn't exist.
-    // Convenience to avoid unwrapping everywhere.
-    fn matrix(&mut self) -> &mut Matrix {
-        if let Some(m) = self.matrix {
-            m
-        } else {
-            let matrix = Matrix::new(self.version.size());
-            self.matrix = Some(matrix);
-            &mut matrix
-        }
-    }
-
 
     fn add_finders(&mut self) {
         let size = self.matrix.size;
