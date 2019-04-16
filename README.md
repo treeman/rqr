@@ -1,6 +1,6 @@
 # rqr
 
-A small QR code project I made to dip my toes into rust again after several years of absence. I was always curious on how QR codes worked and it was a pretty good project to explore rust with. I followed an [excellent tutorial](https://www.thonky.com/qr-code-tutorial/).
+A small QR code generation project I made to dip my toes into rust again after several years of absence. I was always curious on how QR codes worked and it was a pretty good project to explore rust with. I followed an [excellent tutorial](https://www.thonky.com/qr-code-tutorial/) to learn of to implement a QR code generator.
 
 I don't plan on maintaining the project or add features to it. Feel free to look at the code to learn or fork it and do something with it.
 
@@ -59,7 +59,7 @@ let s = StringRenderer::new()
     .render(&qr);
 ```
 
-Producing:
+To produce:
 
 ```
 XXXXXXXXXXXXXX        XX    XXXXXXXXXXXXXX
@@ -169,7 +169,8 @@ Or to generate an svg:
     --fg '#700' --width 200 > hello_world.svg
 ```
 
-![](src/test/hello_world.svg)
+This [outputs the same](src/test/hello_world.svg) as the above example svg code.
+
 
 # Tutorial feedback
 
