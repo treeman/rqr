@@ -3,7 +3,7 @@ use bitvec::*;
 use lazy_static::lazy_static;
 
 /// Encoding modes.
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mode {
     Numeric = 0, // 0..9
     Alphanumeric, // 0..9, A-Z and $%*+-./: and space
@@ -15,12 +15,24 @@ pub enum Mode {
 impl Mode {
     /// Create Mode from string, decide from content.
     pub fn from_str(s: &str) -> Mode {
-        if NUMERIC_RX.is_match(s) {
+        if Mode::in_numeric(s) {
             Mode::Numeric
-        } else if ALPHANUMERIC_RX.is_match(s) {
+        } else if Mode::in_alphanumeric(s) {
             Mode::Alphanumeric
-        } else {
+        } else if Mode::in_byte(s) {
             Mode::Byte
+        } else {
+            // Should never happen.
+            panic!("Unsupported mode for string {}", s);
+        }
+    }
+
+    /// Is this a valid mode for a string?
+    pub fn matches(&self, s: &str) -> bool {
+        match self {
+            Mode::Numeric => Mode::in_numeric(s),
+            Mode::Alphanumeric => Mode::in_alphanumeric(s),
+            Mode::Byte => Mode::in_byte(s),
         }
     }
 
@@ -31,6 +43,21 @@ impl Mode {
             Mode::Alphanumeric => bitvec![0, 0, 1, 0],
             Mode::Byte => bitvec![0, 1, 0, 0],
         }
+    }
+
+    /// Returns true if contents can be represented by the numeric mode.
+    pub fn in_numeric(s: &str) -> bool {
+        NUMERIC_RX.is_match(s)
+    }
+
+    /// Returns true if contents can be represented by the alphanumeric mode.
+    pub fn in_alphanumeric(s: &str) -> bool {
+        ALPHANUMERIC_RX.is_match(s)
+    }
+
+    /// Returns true if contents can be represented by the byte mode.
+    pub fn in_byte(_s: &str) -> bool {
+        true
     }
 }
 

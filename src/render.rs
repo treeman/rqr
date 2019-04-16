@@ -1,8 +1,5 @@
 use crate::matrix::{Matrix, Module};
-
-pub fn to_string(matrix: &Matrix) -> String {
-    StringRenderer::new().render(matrix)
-}
+use crate::qr::Qr;
 
 pub struct StringRenderer {
     light: char,
@@ -49,8 +46,13 @@ impl StringRenderer {
         self
     }
 
-    /// Render to string.
-    pub fn render(&self, matrix: &Matrix) -> String {
+    /// Render QR to string.
+    pub fn render(&self, qr: &Qr) -> String {
+        self.render_matrix(&qr.matrix)
+    }
+
+    /// Render matrix to string.
+    pub fn render_matrix(&self, matrix: &Matrix) -> String {
         let mut res = String::with_capacity(matrix.size * matrix.size);
         self.qz_lines(&mut res);
         for y in 0..matrix.size {
@@ -120,9 +122,9 @@ pub fn to_dbg_string(matrix: &Matrix) -> String {
     res
 }
 
-pub fn to_svg(matrix: &Matrix) -> String {
-    SvgRenderer::new().render(matrix)
-}
+//pub fn to_svg(matrix: &Matrix) -> String {
+    //SvgRenderer::new().render(matrix)
+//}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Color {
@@ -195,8 +197,13 @@ impl SvgRenderer {
         self
     }
 
-    /// Render to svg.
-    pub fn render(&self, matrix: &Matrix) -> String {
+    /// Render QR.
+    pub fn render(&self, qr: &Qr) -> String {
+        self.render_matrix(&qr.matrix)
+    }
+
+    /// Render matrix.
+    pub fn render_matrix(&self, matrix: &Matrix) -> String {
         let cell_count = if self.qz { matrix.size + 8 } else { matrix.size };
         // If not divided evenly adjust upwards and treat specified
         // width and height as minimums.
@@ -250,12 +257,12 @@ mod tests {
         let mut builder = QrBuilder::new()
             .version(Version::new(1))
             .ecl(ECLevel::Q);
-        builder.add_all("HELLO WORLD");
+        builder.add_all("HELLO WORLD").unwrap();
         let s = StringRenderer::new()
             .light_module('~')
             .dark_module('X')
             .module_dimensions(2, 1)
-            .render(&builder.matrix);
+            .render_matrix(&builder.matrix);
         //println!("{}", s);
         let expected =
 "XXXXXXXXXXXXXX~~~~~~~~XX~~~~XXXXXXXXXXXXXX
@@ -288,12 +295,12 @@ XXXXXXXXXXXXXX~~~~XX~~XX~~~~~~~~~~~~~~XX~~
         let mut builder = QrBuilder::new()
             .version(Version::new(1))
             .ecl(ECLevel::Q);
-        builder.add_all("HELLO WORLD");
+        builder.add_all("HELLO WORLD").unwrap();
         let s = SvgRenderer::new()
             .light_module(Color::new(229, 189, 227))
             .dark_module(Color::new(119, 0, 0))
             .dimensions(200, 200)
-            .render(&builder.matrix);
+            .render_matrix(&builder.matrix);
         //println!("{}", s);
         let expected = include_str!("test/hello_world.svg");
         assert_eq!(s, expected);

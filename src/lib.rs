@@ -2,13 +2,13 @@
 #![allow(dead_code)]
 
 pub mod builder;
-mod data;
+pub mod data;
 pub mod ec;
-mod info;
-mod mask;
-mod matrix;
-mod mode;
-mod qr;
+pub mod info;
+pub mod mask;
+pub mod matrix;
+pub mod mode;
+pub mod qr;
 pub mod render;
 pub mod version;
 

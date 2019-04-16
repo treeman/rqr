@@ -25,8 +25,12 @@ pub struct QrBuilder {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Error {
+    /// Mode doesn't support encoding the supplied message.
     UnsupportedMode,
+    /// Message is too long for the supplied version, or larger than the max len.
     MessageTooLong,
+    /// The builder was in an incomplete state when trying to create a QR.
+    IncompleteBuilder,
 }
 
 impl QrBuilder {
@@ -71,18 +75,18 @@ impl QrBuilder {
     }
 
     /// Build all elements and generate a QR code.
-    pub fn into(mut self, s: &str) -> Option<Qr> {
-        self.add_all(s);
+    pub fn into(mut self, s: &str) -> Result<Qr, Error> {
+        self.add_all(s)?;
         self.into_qr()
     }
 
     /// Convert the builder into a QR code.
-    pub fn into_qr(self) -> Option<Qr> {
+    pub fn into_qr(self) -> Result<Qr, Error> {
         if !self.complete() {
-            return None;
+            return Err(Error::IncompleteBuilder);
         }
 
-        Some(Qr {
+        Ok(Qr {
             matrix: self.matrix,
 
             version: self.version.unwrap(),
@@ -94,15 +98,7 @@ impl QrBuilder {
 
     /// Add all elements of a QR code.
     pub fn add_all(&mut self, s: &str) -> Result<(), Error> {
-        self.ensure_settings(s);
-        // We might not find an applicable version.
-
-        println!("{:?}", self.version);
-        println!("{:?}", self.ecl);
-        println!("{:?}", self.mode);
-        println!("{:?}", self.mask);
-        println!("{:?}", self.matrix.size);
-
+        self.ensure_settings(s)?;
         self.add_fun_patterns();
         self.add_data(s)?;
         self.mask_data();
@@ -122,16 +118,12 @@ impl QrBuilder {
 
     /// Add data.
     pub fn add_data(&mut self, s: &str) -> Result<(), Error> {
-        let version = self.version.expect("Version must exist before adding data");
-        let mode = self.mode.expect("Mode must exist before adding data");
+        self.ensure_settings(s)?;
+
+        let version = self.version.unwrap();
+        let mode = self.mode.unwrap();
         let ecl = self.ecl;
 
-        // We're over capacity, avoid crashes.
-        if version.capacity(&mode, &ecl) < s.len() {
-            return Err(Error::MessageTooLong)
-        }
-
-        // Mode must be inferred before.
         let v = data::encode_with_mode(
             s,
             &mode,
@@ -210,19 +202,28 @@ impl QrBuilder {
     }
 
     // Ensure we have required settings, otherwise decide from string.
-    fn ensure_settings(&mut self, s: &str) {
-        if self.mode.is_none() {
-            self.mode = Some(Mode::from_str(s));
+    fn ensure_settings(&mut self, s: &str) -> Result<(), Error> {
+        match self.mode {
+            Some(m) if !m.matches(s) => return Err(Error::UnsupportedMode),
+            Some(_) => (),
+            None => self.mode = Some(Mode::from_str(s)),
         }
+
+        // Try to calculate a minimal version if nothing is provided.
         if self.version.is_none() {
-            match Version::minimal(s, &self.mode.unwrap(), &self.ecl) {
-                Some(v) => {
-                    self.version = Some(v);
-                    self.matrix = Matrix::new(self.version.unwrap().size());
-                },
-                None => {}
-            }
+            self.version = Version::minimal(s, &self.mode.unwrap(), &self.ecl);
         }
+        // We can either fail to find a minimum or a faulty version was provided before.
+        if self.version.is_none() {
+            return Err(Error::MessageTooLong);
+        }
+
+        // Ensure the matrix is intialized.
+        if self.matrix.size == 0 {
+            self.matrix = Matrix::new(self.version.unwrap().size());
+        }
+
+        Ok(())
     }
 
     fn add_finders(&mut self) {
@@ -378,10 +379,7 @@ impl QrBuilder {
         assert_eq!(iter.next(), None);
     }
 
-    /// Convert matrix to string.
-    pub fn to_string(&self) -> String {
-        render::to_string(&self.matrix)
-    }
+    /// Convert to debug string.
     pub fn to_dbg_string(&self) -> String {
         render::to_dbg_string(&self.matrix)
     }
@@ -649,7 +647,7 @@ X-X-X-#X-X-X-X-X#####-X-X
             .version(Version::new(1))
             .ecl(ECLevel::Q);
         builder.add_fun_patterns();
-        builder.add_data("HELLO WORLD");
+        builder.add_data("HELLO WORLD").unwrap();
         //println!("{}", builder.to_dbg_string());
         let expected = "
 #######.*XX-X.#######
@@ -715,7 +713,7 @@ X--XXX#XXX--X----XX-X
         let mut builder = QrBuilder::new()
             .version(Version::new(1))
             .ecl(ECLevel::Q);
-        builder.add_all("HELLO WORLD");
+        builder.add_all("HELLO WORLD").unwrap();
         let expected = "
 #######..--X-.#######
 #.....#.#X--X.#.....#
@@ -749,45 +747,33 @@ XX-XXX#XXXX-XXX-XXXXX
             .ecl(ECLevel::L)
             .mask(7)
             .mode(Mode::Byte);
-        builder.add_all("HELLO WORLD");
-        println!("{}", builder.to_dbg_string());
+        builder.add_all("HELLO WORLD").unwrap();
+        //println!("{}", builder.to_dbg_string());
         assert_eq!(builder.version, Some(Version::new(1)));
         assert_eq!(builder.mask, Some(7));
         assert_eq!(builder.mode, Some(Mode::Byte));
         assert_eq!(builder.ecl, ECLevel::L);
-
-        // Test that we can override version.
-        // Test that minimal version is calculated.
-        // Test that we can override mask.
-        // Test that we can override encoding mode.
     }
 
     #[test]
     fn into_qr() {
         // Regular API.
-        //assert!(QrBuilder::new().into("HELLO WORLD").is_some());
+        assert!(QrBuilder::new().into("HELLO WORLD").is_ok());
 
         // We can encode a zero string although it doesn't make much sense.
-        //assert!(QrBuilder::new().into("").is_some());
+        assert!(QrBuilder::new().into("").is_ok());
 
         // Test over capacity.
         let mut long = String::new();
         for _ in 0..3000 {
             long.push('X');
         }
-        assert!(QrBuilder::new()
-            .mode(Mode::Byte)
-            .ecl(ECLevel::L)
-            .into(&long)
-            .is_none());
+        assert_eq!(QrBuilder::new().mode(Mode::Byte).ecl(ECLevel::L).into(&long),
+                   Err(Error::MessageTooLong));
 
         // Unsupported mode for string content.
-        assert!(QrBuilder::new()
-            .mode(Mode::Numeric)
-            .into("HELLO")
-            .is_none());
-
-        panic!("TODO");
+        assert_eq!(QrBuilder::new().mode(Mode::Numeric).into("HELLO"),
+                   Err(Error::UnsupportedMode));
     }
 }
 

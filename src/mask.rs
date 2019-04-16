@@ -243,7 +243,7 @@ X-X-X-.-X-X-X-X-X-X-X
             .version(Version::new(1))
             .ecl(ECLevel::Q);
         builder.add_fun_patterns();
-        builder.add_data("HELLO WORLD");
+        builder.add_data("HELLO WORLD").unwrap();
         assert_eq!(evaluate_5_in_line(&builder.matrix), 216);
         assert_eq!(evaluate_2x2(&builder.matrix), 219);
         assert_eq!(evaluate_dl_pattern(&builder.matrix), 0);

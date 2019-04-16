@@ -48,7 +48,7 @@ impl Not for Module {
 }
 
 /// Matrix is a 2-dimensional grid holding the QR modules.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Matrix {
     /// Size defines the width and height of the matrix.
     pub size: usize,

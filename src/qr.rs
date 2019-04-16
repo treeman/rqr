@@ -2,9 +2,10 @@ use crate::version::Version;
 use crate::ec::ECLevel;
 use crate::mode::Mode;
 use crate::matrix::Matrix;
+use crate::builder::*;
 
 /// The QR code.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Qr {
     /// Version of the QR code.
     pub version: Version,
@@ -23,15 +24,20 @@ pub struct Qr {
 }
 
 impl Qr {
-    // TODO
-    // Should be able to leave out error correction level and version,
-    // but can supply them if we want to.
+    /// Create a new QR from a string.
+    pub fn new(s: &str) -> Result<Qr, Error> {
+        QrBuilder::new().into(s)
+    }
 
-    //pub fn new(s: &str, ecl: &ECLevel) -> Qr {
-    //}
-    //pub fn with_version(s: &str, v: &Version) -> Qr {
+    /// Create a new QR with specified error correction.
+    pub fn with_ecl(s: &str, ecl: ECLevel) -> Result<Qr, Error> {
+        QrBuilder::new().ecl(ecl).into(s)
+    }
 
-    //}
+    /// Create a new QR with a specified version.
+    pub fn with_version(s: &str, v: Version) -> Result<Qr, Error> {
+        QrBuilder::new().version(v).into(s)
+    }
 
     /// Returns the size of the QR code.
     pub fn size(&self) -> usize {
