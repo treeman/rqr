@@ -114,20 +114,19 @@ fn group_into_blocks(bv: &BitVec, layout: &Vec<usize>) -> Vec<Vec<u8>> {
     res
 }
 
-// Helper method to crate a BitVec from a string with '0' and '1'.
-// Discards any other characters, like newlines.
-fn bitvec_from_bin_str(s: &str) -> BitVec {
-    s.chars()
-     .filter(|x| *x == '1' || *x == '0')
-     .map(|x| x == '1')
-     .collect()
-}
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::data;
+
+    // Helper method to crate a BitVec from a string with '0' and '1'.
+    // Discards any other characters, like newlines.
+    pub fn bitvec_from_bin_str(s: &str) -> BitVec {
+        s.chars()
+        .filter(|x| *x == '1' || *x == '0')
+        .map(|x| x == '1')
+        .collect()
+    }
 
     #[test]
     fn ec_tutorial_example() {
@@ -231,11 +230,11 @@ mod tests {
         let version = Version::new(1);
         let ecl = ECLevel::Q;
 
-        let (_, mut data) = data::encode("HELLO WORLD", &version, &ecl);
+        let (_, mut data) = data::encode("HELLO WORLD", version, ecl);
 
-        let ec_count = info::block_ec_count(&version, &ecl);
+        let ec_count = info::block_ec_count(version, ecl);
         let mut ec_data: BitVec = generate_ec_codewords(data.as_slice(), ec_count).into();
-        let ec = add(data.clone(), &version, &ecl);
+        let ec = add(data.clone(), version, ecl);
 
         assert_eq!(ec.len(), data.len() + ec_data.len());
 

@@ -1,12 +1,5 @@
 extern crate rqr;
-
-use rqr::builder::QrBuilder;
-use rqr::version::Version;
-use rqr::ec::ECLevel;
-use rqr::render::*;
-use rqr::qr::Qr;
-use rqr::mode::Mode;
-use rqr::mask::Mask;
+use rqr::*;
 
 fn main() {
     //let mut builder = QrBuilder::new()
