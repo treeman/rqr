@@ -1,9 +1,9 @@
-extern crate rqr;
 #[macro_use]
 extern crate clap;
-
 use clap::{App, Arg, ArgMatches};
-use rqr::*;
+
+extern crate rqr;
+use rqr::{Qr, SvgRenderer, StringRenderer, Color};
 
 fn main() {
     let matches = App::new("rqr cli")
@@ -35,20 +35,12 @@ fn main() {
         .get_matches();
 
     let s = matches.value_of("input").unwrap();
+    let qr = Qr::new(s).expect("Input string too long");
 
     match matches.value_of("type").unwrap() {
-        "svg" => output_svg(s, &matches),
-        _ => output_string(s, &matches),
+        "svg" => output_svg(&qr, &matches),
+        _ => output_string(&qr, &matches),
     }
-
-    //let s = matches.value_of("input").unwrap();
-    //let t = matches.value_of("type").unwrap();
-
-    ////}
-    //println!("type: {}", t);
-    //println!("string: {}", s);
-
-    return;
 
     //let mut builder = QrBuilder::new()
         //.version(Version::new(1))
@@ -61,28 +53,28 @@ fn main() {
         //.render(&builder.matrix);
     //println!("{}", s);
 
-    let qr = Qr::new("HELLO WORLD").unwrap();
-    let s = StringRenderer::new().render(&qr);
-    println!("{}", s);
-    //let s = SvgRenderer::new()
-        //.light_module(Color::new(229, 189, 227))
-        //.dark_module(Color::new(119, 0, 0))
-        //.dimensions(200, 200)
-        //.render(&builder.matrix);
+    //let qr = Qr::new("HELLO WORLD").unwrap();
+    //let s = StringRenderer::new().render(&qr);
+    //println!("{}", s);
+    ////let s = SvgRenderer::new()
+        ////.light_module(Color::new(229, 189, 227))
+        ////.dark_module(Color::new(119, 0, 0))
+        ////.dimensions(200, 200)
+        ////.render(&builder.matrix);
 
-    // TODO this should be an interface.
-    let qr2: Qr = QrBuilder::new()
-        .ecl(ECLevel::L)
-        .version(Version::new(3))
-        .mask(Mask::new(2))
-        .mode(Mode::Byte)
-        .into("HELLO WORLD")
-        .unwrap();
-    let s = StringRenderer::new().render(&qr2);
-    println!("{}", s);
+    //// TODO this should be an interface.
+    //let qr2: Qr = QrBuilder::new()
+        //.ecl(ECLevel::L)
+        //.version(Version::new(3))
+        //.mask(Mask::new(2))
+        //.mode(Mode::Byte)
+        //.into("HELLO WORLD")
+        //.unwrap();
+    //let s = StringRenderer::new().render(&qr2);
+    //println!("{}", s);
 }
 
-fn output_svg(s: &str, matches: &ArgMatches) {
+fn output_svg(qr: &Qr, matches: &ArgMatches) {
     let mut r = SvgRenderer::new();
 
     if let Some(bg) = matches.value_of("bg") {
@@ -97,10 +89,19 @@ fn output_svg(s: &str, matches: &ArgMatches) {
         let w: usize = w.parse().expect("Width must be an integer value");
         r = r.dimensions(w, w);
     }
+
+    let s = r.render(&qr);
+    println!("{}", s);
 }
 
-fn output_string(s: &str, matches: &ArgMatches) {
-
+fn output_string(qr: &Qr, _matches: &ArgMatches) {
+    // Pretty print in terminal.
+    let s = StringRenderer::new()
+        .dark_module('\u{2588}')
+        .light_module(' ')
+        .quiet_zone(true)
+        .module_dimensions(2, 1)
+        .render(&qr);
+    println!("{}", s);
 }
-
 
