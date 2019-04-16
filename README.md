@@ -14,7 +14,57 @@ Minor improvements suggestions:
 
 # TODO
 
-* Create CLI
 * Add doc comments
-* Instead of `from_str` methods implement into trait?
+
+# Examples
+
+## CLI
+
+There's a simple cli you can use.
+
+It uses optional dependencies to avoid arg parser dependencies to the library, so you need to build it with the flag `--features cli`.
+
+For example to pretty print a QR in a terminal:
+
+```
+> cargo run --features cli -- "HELLO WORLD"
+
+
+
+
+        ██████████████        ██    ██████████████        
+        ██          ██  ████    ██  ██          ██        
+        ██  ██████  ██    ██  ████  ██  ██████  ██        
+        ██  ██████  ██  ██████████  ██  ██████  ██        
+        ██  ██████  ██  ████  ██    ██  ██████  ██        
+        ██          ██    ██    ██  ██          ██        
+        ██████████████  ██  ██  ██  ██████████████        
+                        ████  ████                        
+          ██  ████████  ████    ██████  ████  ██          
+        ██  ████████  ██        ████████  ██████          
+            ██  ██  ████      ██    ████                  
+        ██  ████  ██      ██  ████      ████              
+        ████  ████████████████  ██████  ██████████        
+                        ██      ██    ██  ██              
+        ██████████████    ████    ████    ████████        
+        ██          ██  ██  ██    ██    ██  ██████        
+        ██  ██████  ██  ████  ██    ██      ██████        
+        ██  ██████  ██  ██  ██████      ██  ██            
+        ██  ██████  ██    ██        ██        ████        
+        ██          ██  ██████    ██████    ████          
+        ██████████████    ██  ██              ██          
+
+
+
+
+```
+
+Or to generate an svg:
+
+```
+> cargo run --features cli -- "HELLO WORLD" -t svg --bg '#e5bde3' \
+    --fg '#700' --width 200 > hello_world.svg
+```
+
+![](src/test/hello_world.svg)
 

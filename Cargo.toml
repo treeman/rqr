@@ -8,6 +8,14 @@ edition = "2018"
 regex = "1"
 bitvec = "0.10"
 lazy_static = "1.0"
-clap = { version = "~2.27.0", default-features = false }
-#clap = "~2.27.0"
+clap = { version = "~2.27.0", default-features = false, optional = true }
 
+[lib]
+name = "rqr"
+
+[features]
+cli = ["clap"]
+
+[[bin]]
+name = "rqr"
+required-features = ["cli"]
