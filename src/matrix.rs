@@ -48,7 +48,7 @@ impl Not for Module {
 }
 
 /// Matrix is a 2-dimensional grid holding the QR modules.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Matrix {
     /// Size defines the width and height of the matrix.
     pub size: usize,
@@ -168,6 +168,19 @@ impl Matrix {
             }
         }
         false
+    }
+
+    /// Return true if the matrix is complete, that's if it only contains
+    /// Data or Function modules.
+    pub fn complete(&self) -> bool {
+        for m in self.modules.iter() {
+            match m {
+                Module::Unknown => return false,
+                Module::Reserved => return false,
+                _ => {},
+            }
+        }
+        true
     }
 }
 

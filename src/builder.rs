@@ -23,6 +23,12 @@ pub struct QrBuilder {
     pub matrix: Matrix,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Error {
+    UnsupportedMode,
+    MessageTooLong,
+}
+
 impl QrBuilder {
     pub fn new() -> QrBuilder {
         QrBuilder {
@@ -65,29 +71,44 @@ impl QrBuilder {
     }
 
     /// Build all elements and generate a QR code.
-    pub fn build_qr(mut self, s: &str) -> Qr {
+    pub fn into(mut self, s: &str) -> Option<Qr> {
         self.add_all(s);
         self.into_qr()
     }
 
-    // TODO Option or Result
-    pub fn into_qr(self) -> Qr {
-        Qr {
+    /// Convert the builder into a QR code.
+    pub fn into_qr(self) -> Option<Qr> {
+        if !self.complete() {
+            return None;
+        }
+
+        Some(Qr {
             matrix: self.matrix,
 
             version: self.version.unwrap(),
             ecl: self.ecl,
             mode: self.mode.unwrap(),
             mask: self.mask.unwrap(),
-        }
+        })
     }
 
     /// Add all elements of a QR code.
-    pub fn add_all(&mut self, s: &str) {
+    pub fn add_all(&mut self, s: &str) -> Result<(), Error> {
+        self.ensure_settings(s);
+        // We might not find an applicable version.
+
+        println!("{:?}", self.version);
+        println!("{:?}", self.ecl);
+        println!("{:?}", self.mode);
+        println!("{:?}", self.mask);
+        println!("{:?}", self.matrix.size);
+
         self.add_fun_patterns();
-        self.add_data(s);
+        self.add_data(s)?;
         self.mask_data();
         self.add_info();
+
+        Ok(())
     }
 
     /// Add function patterns.
@@ -100,12 +121,27 @@ impl QrBuilder {
     }
 
     /// Add data.
-    pub fn add_data(&mut self, s: &str) {
-        let (mode, v) = data::encode(s, &self.version.unwrap(), &self.ecl);
-        self.mode = Some(mode);
+    pub fn add_data(&mut self, s: &str) -> Result<(), Error> {
+        let version = self.version.expect("Version must exist before adding data");
+        let mode = self.mode.expect("Mode must exist before adding data");
+        let ecl = self.ecl;
 
+        // We're over capacity, avoid crashes.
+        if version.capacity(&mode, &ecl) < s.len() {
+            return Err(Error::MessageTooLong)
+        }
+
+        // Mode must be inferred before.
+        let v = data::encode_with_mode(
+            s,
+            &mode,
+            &version,
+            &ecl
+        );
         let v = ec::add(v, &self.version.unwrap(), &self.ecl);
         self.add_raw_data(&v);
+
+        Ok(())
     }
 
     /// Add raw data.
@@ -159,6 +195,33 @@ impl QrBuilder {
     pub fn add_version_info(&mut self) {
         if let Some(v) = info::version_info(&self.version.unwrap()) {
             self.add_version(&v);
+        }
+    }
+
+    /// Return true if the build is complete.
+    fn complete(&self) -> bool {
+        if self.version.is_none() || self.mode.is_none() || self.mask.is_none() {
+            return false;
+        }
+        if self.matrix.size == 0 {
+            return false;
+        }
+        self.matrix.complete()
+    }
+
+    // Ensure we have required settings, otherwise decide from string.
+    fn ensure_settings(&mut self, s: &str) {
+        if self.mode.is_none() {
+            self.mode = Some(Mode::from_str(s));
+        }
+        if self.version.is_none() {
+            match Version::minimal(s, &self.mode.unwrap(), &self.ecl) {
+                Some(v) => {
+                    self.version = Some(v);
+                    self.matrix = Matrix::new(self.version.unwrap().size());
+                },
+                None => {}
+            }
         }
     }
 
@@ -680,11 +743,52 @@ XX-XXX#XXXX-XXX-XXXXX
         assert_eq!(builder.to_dbg_string(), expected);
     }
 
-    //#[test]
-    //fn config() {
-        //let mut builder = QrBuilder::new(&Version::new(1));
-        //builder.version(
-    //}
+    #[test]
+    fn config() {
+        let mut builder = QrBuilder::new()
+            .ecl(ECLevel::L)
+            .mask(7)
+            .mode(Mode::Byte);
+        builder.add_all("HELLO WORLD");
+        println!("{}", builder.to_dbg_string());
+        assert_eq!(builder.version, Some(Version::new(1)));
+        assert_eq!(builder.mask, Some(7));
+        assert_eq!(builder.mode, Some(Mode::Byte));
+        assert_eq!(builder.ecl, ECLevel::L);
+
+        // Test that we can override version.
+        // Test that minimal version is calculated.
+        // Test that we can override mask.
+        // Test that we can override encoding mode.
+    }
+
+    #[test]
+    fn into_qr() {
+        // Regular API.
+        //assert!(QrBuilder::new().into("HELLO WORLD").is_some());
+
+        // We can encode a zero string although it doesn't make much sense.
+        //assert!(QrBuilder::new().into("").is_some());
+
+        // Test over capacity.
+        let mut long = String::new();
+        for _ in 0..3000 {
+            long.push('X');
+        }
+        assert!(QrBuilder::new()
+            .mode(Mode::Byte)
+            .ecl(ECLevel::L)
+            .into(&long)
+            .is_none());
+
+        // Unsupported mode for string content.
+        assert!(QrBuilder::new()
+            .mode(Mode::Numeric)
+            .into("HELLO")
+            .is_none());
+
+        panic!("TODO");
+    }
 }
 
 static ALIGNMENT_LOCATIONS: [&[usize]; 40] = [

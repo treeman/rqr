@@ -4,7 +4,7 @@ use crate::info;
 use bitvec::*;
 
 /// Error correction level
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ECLevel {
     L = 0, // Recovers 7% of data
     M, // Recovers 15% of data

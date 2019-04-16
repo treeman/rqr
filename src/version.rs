@@ -25,9 +25,14 @@ impl Version {
         None
     }
 
+    /// Return the data capacity.
+    pub fn capacity(&self, mode: &Mode, e: &ECLevel) -> usize {
+        CAPACITIES[self.index()][*e as usize][*mode as usize]
+    }
+
     /// Return the size of the QR code.
     pub fn size(&self) -> usize {
-        (((self.0 - 1) * 4) + 21)
+        (((self.index()) * 4) + 21)
     }
 
     /// Returns the required len of the char count bit representation.

@@ -4,6 +4,7 @@ use crate::mode::Mode;
 use crate::matrix::Matrix;
 
 /// The QR code.
+#[derive(Debug)]
 pub struct Qr {
     /// Version of the QR code.
     pub version: Version,
