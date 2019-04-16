@@ -169,7 +169,7 @@ Or to generate an svg:
     --fg '#700' --width 200 > hello_world.svg
 ```
 
-This [outputs the same](src/test/hello_world.svg) as the above example svg code.
+This [outputs the same](#svg-generation) as the above example svg code.
 
 
 # Tutorial feedback
