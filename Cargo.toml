@@ -3,6 +3,10 @@ name = "rqr"
 version = "0.1.0"
 authors = ["Jonas Hietala <mail@jonashietala.se>"]
 edition = "2018"
+description = "A small QR code generation project I made to dip my toes into rust again after several years of absence."
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/treeman/rqr"
 
 [dependencies]
 regex = "1"
@@ -19,3 +23,4 @@ cli = ["clap"]
 [[bin]]
 name = "rqr"
 required-features = ["cli"]
+
