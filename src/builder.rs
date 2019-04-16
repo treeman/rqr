@@ -108,6 +108,7 @@ impl QrBuilder {
         self.add_timing_patterns();
         self.add_dark_module();
         self.add_reserved_areas();
+        self.has_fun_patterns = true;
     }
 
     /// Add data.
@@ -131,6 +132,7 @@ impl QrBuilder {
             vi += 1;
         }
         assert_eq!(vi, v.len());
+        self.has_data = true;
     }
 
     /// Mask data.
@@ -147,6 +149,7 @@ impl QrBuilder {
         let (mask, masked) = mask::mask(&self.matrix);
         self.mask = Some(mask);
         self.matrix = masked;
+        self.is_masked = true;
     }
 
     /// Mask using
@@ -154,12 +157,14 @@ impl QrBuilder {
         assert!(mask <= 7);
         self.mask = Some(mask);
         self.matrix = mask::apply_mask(mask, &self.matrix);
+        self.is_masked = true;
     }
 
     /// Add info.
     pub fn add_info(&mut self) {
         self.add_format_info();
         self.add_version_info();
+        self.has_info = true;
     }
 
     /// Add format info.
