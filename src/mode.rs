@@ -3,9 +3,9 @@ use bitvec::*;
 use lazy_static::lazy_static;
 
 /// Encoding modes.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Mode {
-    Numeric, // 0..9
+    Numeric = 0, // 0..9
     Alphanumeric, // 0..9, A-Z and $%*+-./: and space
     Byte, // ISO-8859-1 character set
     //ECI, // specifies the character set directly (like UTF-8)

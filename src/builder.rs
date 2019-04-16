@@ -13,27 +13,46 @@ use bitvec::*;
 
 /// Builder for a QR code.
 pub struct QrBuilder {
+    // Settings during build.
+    //pub version: Option<Version>,
     pub version: Version,
-    pub matrix: Matrix,
     pub mask: Option<usize>,
     pub ecl: Option<ECLevel>,
     pub mode: Option<Mode>,
+
+    // Resulting matrix.
+    pub matrix: Matrix,
+
+    // Build status.
+    has_fun_patterns: bool,
+    has_data: bool,
+    is_masked: bool,
+    has_info: bool,
 }
 
 impl QrBuilder {
     pub fn new(v: &Version) -> QrBuilder {
         QrBuilder {
-            version: (*v).clone(),
+            version: *v,
             matrix: Matrix::new(v.size()),
             mask: None,
             ecl: None,
             mode: None,
+            has_fun_patterns: false,
+            has_data: false,
+            is_masked: false,
+            has_info: false,
         }
     }
 
     /// Build all elements and generate a QR code.
     pub fn build_qr(mut self, s: &str, ecl: &ECLevel) -> Qr {
-        self.build_all(s, ecl);
+        self.add_all(s, ecl);
+        self.into_qr()
+    }
+
+    // TODO Option or Result
+    pub fn into_qr(self) -> Qr {
         Qr {
             version: self.version,
             matrix: self.matrix,
@@ -43,13 +62,12 @@ impl QrBuilder {
         }
     }
 
-    /// Build all elements of a QR code.
-    pub fn build_all(&mut self, s: &str, ecl: &ECLevel) {
+    /// Add all elements of a QR code.
+    pub fn add_all(&mut self, s: &str, ecl: &ECLevel) {
         self.add_fun_patterns();
         self.add_data(s, ecl);
         self.mask();
-        self.add_format_info();
-        self.add_version_info();
+        self.add_info();
     }
 
     /// Add function patterns.
@@ -95,6 +113,12 @@ impl QrBuilder {
         assert!(m <= 7);
         self.mask = Some(m);
         self.matrix = mask::apply_mask(m, &self.matrix);
+    }
+
+    /// Add info.
+    pub fn add_info(&mut self) {
+        self.add_format_info();
+        self.add_version_info();
     }
 
     /// Add format info.
@@ -597,7 +621,7 @@ X--XXX#XXX--X----XX-X
     fn hello_world() {
         // Builds a final QR code which should be scannable.
         let mut builder = QrBuilder::new(&Version::new(1));
-        builder.build_all("HELLO WORLD", &ECLevel::Q);
+        builder.add_all("HELLO WORLD", &ECLevel::Q);
         let expected = "
 #######..--X-.#######
 #.....#.#X--X.#.....#
