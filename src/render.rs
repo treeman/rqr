@@ -247,8 +247,10 @@ mod tests {
 
     #[test]
     fn string_renderer() {
-        let mut builder = QrBuilder::new().version(Version::new(1));
-        builder.add_all("HELLO WORLD", &ECLevel::Q);
+        let mut builder = QrBuilder::new()
+            .version(Version::new(1))
+            .ecl(ECLevel::Q);
+        builder.add_all("HELLO WORLD");
         let s = StringRenderer::new()
             .light_module('~')
             .dark_module('X')
@@ -283,8 +285,10 @@ XXXXXXXXXXXXXX~~~~XX~~XX~~~~~~~~~~~~~~XX~~
 
     #[test]
     fn svg_renderer() {
-        let mut builder = QrBuilder::new().version(Version::new(1));
-        builder.add_all("HELLO WORLD", &ECLevel::Q);
+        let mut builder = QrBuilder::new()
+            .version(Version::new(1))
+            .ecl(ECLevel::Q);
+        builder.add_all("HELLO WORLD");
         let s = SvgRenderer::new()
             .light_module(Color::new(229, 189, 227))
             .dark_module(Color::new(119, 0, 0))

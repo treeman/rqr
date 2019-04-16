@@ -239,9 +239,11 @@ X-X-X-.-X-X-X-X-X-X-X
 
     #[test]
     fn mask_evaluation() {
-        let mut builder = QrBuilder::new().version(Version::new(1));
+        let mut builder = QrBuilder::new()
+            .version(Version::new(1))
+            .ecl(ECLevel::Q);
         builder.add_fun_patterns();
-        builder.add_data("HELLO WORLD", &ECLevel::Q);
+        builder.add_data("HELLO WORLD");
         assert_eq!(evaluate_5_in_line(&builder.matrix), 216);
         assert_eq!(evaluate_2x2(&builder.matrix), 219);
         assert_eq!(evaluate_dl_pattern(&builder.matrix), 0);

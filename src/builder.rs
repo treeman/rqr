@@ -16,17 +16,11 @@ pub struct QrBuilder {
     // Settings during build.
     pub version: Option<Version>,
     pub mask: Option<usize>,
-    pub ecl: Option<ECLevel>,
+    pub ecl: ECLevel,
     pub mode: Option<Mode>,
 
     // Resulting matrix.
     pub matrix: Matrix,
-
-    // Build status.
-    has_fun_patterns: bool,
-    has_data: bool,
-    is_masked: bool,
-    has_info: bool,
 }
 
 impl QrBuilder {
@@ -34,17 +28,12 @@ impl QrBuilder {
         QrBuilder {
             version: None,
             mask: None,
-            ecl: Some(ECLevel::Q),
+            ecl: ECLevel::Q,
             mode: None,
 
             // Matrix will be rebuilt when version changes.
             // Easier implementation wise compared to if Matrix is an Option.
             matrix: Matrix::new(0),
-
-            has_fun_patterns: false,
-            has_data: false,
-            is_masked: false,
-            has_info: false,
         }
     }
 
@@ -64,8 +53,8 @@ impl QrBuilder {
     }
 
     /// Set error correction. Will default to ECLevel::Q.
-    pub fn error_correction(mut self, ecl: ECLevel) -> Self {
-        self.ecl = Some(ecl);
+    pub fn ecl(mut self, ecl: ECLevel) -> Self {
+        self.ecl = ecl;
         self
     }
 
@@ -76,8 +65,8 @@ impl QrBuilder {
     }
 
     /// Build all elements and generate a QR code.
-    pub fn build_qr(mut self, s: &str, ecl: &ECLevel) -> Qr {
-        self.add_all(s, ecl);
+    pub fn build_qr(mut self, s: &str) -> Qr {
+        self.add_all(s);
         self.into_qr()
     }
 
@@ -87,16 +76,16 @@ impl QrBuilder {
             matrix: self.matrix,
 
             version: self.version.unwrap(),
-            ecl: self.ecl.unwrap(),
+            ecl: self.ecl,
             mode: self.mode.unwrap(),
             mask: self.mask.unwrap(),
         }
     }
 
     /// Add all elements of a QR code.
-    pub fn add_all(&mut self, s: &str, ecl: &ECLevel) {
+    pub fn add_all(&mut self, s: &str) {
         self.add_fun_patterns();
-        self.add_data(s, ecl);
+        self.add_data(s);
         self.mask_data();
         self.add_info();
     }
@@ -108,18 +97,14 @@ impl QrBuilder {
         self.add_timing_patterns();
         self.add_dark_module();
         self.add_reserved_areas();
-        self.has_fun_patterns = true;
     }
 
     /// Add data.
-    pub fn add_data(&mut self, s: &str, ecl: &ECLevel) {
-        // TODO calculate version if doesn't exist.
-        self.ecl = Some(*ecl);
-
-        let (mode, v) = data::encode(s, &self.version.unwrap(), ecl);
+    pub fn add_data(&mut self, s: &str) {
+        let (mode, v) = data::encode(s, &self.version.unwrap(), &self.ecl);
         self.mode = Some(mode);
 
-        let v = ec::add(v, &self.version.unwrap(), ecl);
+        let v = ec::add(v, &self.version.unwrap(), &self.ecl);
         self.add_raw_data(&v);
     }
 
@@ -132,7 +117,6 @@ impl QrBuilder {
             vi += 1;
         }
         assert_eq!(vi, v.len());
-        self.has_data = true;
     }
 
     /// Mask data.
@@ -149,28 +133,25 @@ impl QrBuilder {
         let (mask, masked) = mask::mask(&self.matrix);
         self.mask = Some(mask);
         self.matrix = masked;
-        self.is_masked = true;
     }
 
-    /// Mask using
+    /// Mask using a specific mask.
     pub fn mask_with(&mut self, mask: usize) {
         assert!(mask <= 7);
         self.mask = Some(mask);
         self.matrix = mask::apply_mask(mask, &self.matrix);
-        self.is_masked = true;
     }
 
     /// Add info.
     pub fn add_info(&mut self) {
         self.add_format_info();
         self.add_version_info();
-        self.has_info = true;
     }
 
     /// Add format info.
     pub fn add_format_info(&mut self) {
         // Hard assumption that we have necessary data.
-        let format = info::format_info(&self.ecl.unwrap(), self.mask.unwrap());
+        let format = info::format_info(&self.ecl, self.mask.unwrap());
         self.add_format(&format);
     }
 
@@ -601,9 +582,11 @@ X-X-X-#X-X-X-X-X#####-X-X
 
     #[test]
     fn add_data() {
-        let mut builder = QrBuilder::new().version(Version::new(1));
+        let mut builder = QrBuilder::new()
+            .version(Version::new(1))
+            .ecl(ECLevel::Q);
         builder.add_fun_patterns();
-        builder.add_data("HELLO WORLD", &ECLevel::Q);
+        builder.add_data("HELLO WORLD");
         //println!("{}", builder.to_dbg_string());
         let expected = "
 #######.*XX-X.#######
@@ -666,8 +649,10 @@ X--XXX#XXX--X----XX-X
     #[test]
     fn hello_world() {
         // Builds a final QR code which should be scannable.
-        let mut builder = QrBuilder::new().version(Version::new(1));
-        builder.add_all("HELLO WORLD", &ECLevel::Q);
+        let mut builder = QrBuilder::new()
+            .version(Version::new(1))
+            .ecl(ECLevel::Q);
+        builder.add_all("HELLO WORLD");
         let expected = "
 #######..--X-.#######
 #.....#.#X--X.#.....#
