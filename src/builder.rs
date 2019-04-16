@@ -14,14 +14,13 @@ use bitvec::*;
 /// Builder for a QR code.
 pub struct QrBuilder {
     // Settings during build.
-    //pub version: Option<Version>,
-    pub version: Version,
+    pub version: Option<Version>,
     pub mask: Option<usize>,
     pub ecl: Option<ECLevel>,
     pub mode: Option<Mode>,
 
     // Resulting matrix.
-    pub matrix: Option<Matrix>,
+    pub matrix: Matrix,
 
     // Build status.
     has_fun_patterns: bool,
@@ -31,13 +30,17 @@ pub struct QrBuilder {
 }
 
 impl QrBuilder {
-    pub fn new(v: &Version) -> QrBuilder {
+    pub fn new() -> QrBuilder {
         QrBuilder {
-            version: *v,
-            matrix: Some(Matrix::new(v.size())),
+            version: None,
             mask: None,
             ecl: Some(ECLevel::Q),
             mode: None,
+
+            // Matrix will be rebuilt when version changes.
+            // Easier implementation wise compared to if Matrix is an Option.
+            matrix: Matrix::new(0),
+
             has_fun_patterns: false,
             has_data: false,
             is_masked: false,
@@ -47,7 +50,9 @@ impl QrBuilder {
 
     /// Set version. If not set the smallest applicable version will be used.
     pub fn version(mut self, v: Version) -> Self {
-        self.version = v;
+        // Override old tmp matrix.
+        self.matrix = Matrix::new(v.size());
+        self.version = Some(v);
         self
     }
 
@@ -79,8 +84,9 @@ impl QrBuilder {
     // TODO Option or Result
     pub fn into_qr(self) -> Qr {
         Qr {
-            version: self.version,
-            matrix: self.matrix.unwrap(),
+            matrix: self.matrix,
+
+            version: self.version.unwrap(),
             ecl: self.ecl.unwrap(),
             mode: self.mode.unwrap(),
             mask: self.mask.unwrap(),
@@ -106,21 +112,22 @@ impl QrBuilder {
 
     /// Add data.
     pub fn add_data(&mut self, s: &str, ecl: &ECLevel) {
+        // TODO calculate version if doesn't exist.
         self.ecl = Some(*ecl);
 
-        let (mode, v) = data::encode(s, &self.version, ecl);
+        let (mode, v) = data::encode(s, &self.version.unwrap(), ecl);
         self.mode = Some(mode);
 
-        let v = ec::add(v, &self.version, ecl);
+        let v = ec::add(v, &self.version.unwrap(), ecl);
         self.add_raw_data(&v);
     }
 
     /// Add raw data.
     pub fn add_raw_data(&mut self, v: &BitVec) {
         let mut vi = 0;
-        for (x, y) in ZigZagIt::new(self.matrix().size) {
-            if self.matrix().is_fun(x, y) { continue; }
-            self.matrix().set_data(x, y, v[vi]);
+        for (x, y) in ZigZagIt::new(self.matrix.size) {
+            if self.matrix.is_fun(x, y) { continue; }
+            self.matrix.set_data(x, y, v[vi]);
             vi += 1;
         }
         assert_eq!(vi, v.len());
@@ -137,7 +144,7 @@ impl QrBuilder {
 
     /// Mask by evaluating available masks and choose the best one.
     pub fn mask_best(&mut self) {
-        let (mask, masked) = mask::mask(&self.matrix());
+        let (mask, masked) = mask::mask(&self.matrix);
         self.mask = Some(mask);
         self.matrix = masked;
     }
@@ -146,7 +153,7 @@ impl QrBuilder {
     pub fn mask_with(&mut self, mask: usize) {
         assert!(mask <= 7);
         self.mask = Some(mask);
-        self.matrix = mask::apply_mask(mask, &self.matrix());
+        self.matrix = mask::apply_mask(mask, &self.matrix);
     }
 
     /// Add info.
@@ -164,25 +171,13 @@ impl QrBuilder {
 
     /// Add version info.
     pub fn add_version_info(&mut self) {
-        if let Some(v) = info::version_info(&self.version) {
+        if let Some(v) = info::version_info(&self.version.unwrap()) {
             self.add_version(&v);
         }
     }
 
-    // Get the matrix, construct it if it doesn't exist.
-    // Convenience to avoid unwrapping everywhere.
-    fn matrix(&mut self) -> &mut Matrix {
-        if let Some(m) = self.matrix {
-            &mut m
-        } else {
-            let matrix = Matrix::new(self.version.size());
-            self.matrix = Some(matrix);
-            &mut matrix
-        }
-    }
-
     fn add_finders(&mut self) {
-        let size = self.matrix().size;
+        let size = self.matrix.size;
 
         self.add_finder(0, 0);
         self.add_separator(0, 7, 7, 7);
@@ -199,20 +194,20 @@ impl QrBuilder {
 
     // x and y specifies the top left corner
     fn add_finder(&mut self, x: usize, y: usize) {
-        self.matrix().set_square(x, y, 7, Module::Function(true));
-        self.matrix().set_square_outline(x + 1, y + 1, 5, Module::Function(false));
+        self.matrix.set_square(x, y, 7, Module::Function(true));
+        self.matrix.set_square_outline(x + 1, y + 1, 5, Module::Function(false));
     }
 
     fn add_separator(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
         for a in x0..x1 + 1 {
             for b in y0..y1 + 1 {
-                self.matrix().set(a, b, Module::Function(false));
+                self.matrix.set(a, b, Module::Function(false));
             }
         }
     }
 
     fn add_alignments(&mut self) {
-        let locations = ALIGNMENT_LOCATIONS[self.version.index()];
+        let locations = ALIGNMENT_LOCATIONS[self.version.unwrap().index()];
         for x in locations.iter() {
             for y in locations.iter() {
                 self.try_add_alignment(*x, *y);
@@ -224,15 +219,15 @@ impl QrBuilder {
     fn try_add_alignment(&mut self, cx: usize, cy: usize) {
         let x = cx - 2;
         let y = cy - 2;
-        if !self.matrix().any_in_square(x, y, 4) {
-            self.matrix().set_square(x, y, 5, Module::Function(true));
-            self.matrix().set_square_outline(x + 1, y + 1, 3, Module::Function(false));
+        if !self.matrix.any_in_square(x, y, 4) {
+            self.matrix.set_square(x, y, 5, Module::Function(true));
+            self.matrix.set_square_outline(x + 1, y + 1, 3, Module::Function(false));
         }
     }
 
     fn add_timing_patterns(&mut self) {
         let offset = 6;
-        for i in offset..self.matrix().size - offset {
+        for i in offset..self.matrix.size - offset {
             let v = i % 2 == 0;
             self.set_timing(i, offset, v);
             self.set_timing(offset, i, v);
@@ -241,20 +236,20 @@ impl QrBuilder {
 
     fn set_timing(&mut self, x: usize, y: usize, v: bool) {
         // Timing patterns should always overlap with finders and alignment modules.
-        if self.matrix().is_fun(x, y) {
-            assert_eq!(self.matrix().is_dark(x, y), v, "timing overlap {},{}", x, y);
+        if self.matrix.is_fun(x, y) {
+            assert_eq!(self.matrix.is_dark(x, y), v, "timing overlap {},{}", x, y);
         }
 
-        self.matrix().set(x, y, Module::Function(v));
+        self.matrix.set(x, y, Module::Function(v));
     }
 
     fn add_dark_module(&mut self) {
-        let (x, y) = self.version.dark_module_pos();
-        self.matrix().set(x, y, Module::Function(true));
+        let (x, y) = self.version.unwrap().dark_module_pos();
+        self.matrix.set(x, y, Module::Function(true));
     }
 
     fn add_reserved_areas(&mut self) {
-        let size = self.matrix().size;
+        let size = self.matrix.size;
 
         // Around top left finder.
         // Avoid timing pattern.
@@ -270,56 +265,56 @@ impl QrBuilder {
         self.reserve_rect(8, size - 7, 8, size - 1);
 
         //// Larger versions needs two areas for version information.
-        if self.version.extra_version_areas() {
+        if self.version.unwrap().extra_version_areas() {
             self.reserve_rect(0, size - 11, 5, size - 9);
             self.reserve_rect(size - 11, 0, size - 9, 5);
         }
     }
 
     fn reserve_rect(&mut self, x0: usize, y0: usize, x1: usize, y1: usize) {
-        assert!(!self.matrix().any_in_rect(x0, y0, x1, y1));
-        self.matrix().set_rect(x0, y0, x1, y1, Module::Reserved);
+        assert!(!self.matrix.any_in_rect(x0, y0, x1, y1));
+        self.matrix.set_rect(x0, y0, x1, y1, Module::Reserved);
     }
 
     fn add_format(&mut self, bv: &BitVec) {
         assert_eq!(bv.len(), 15);
-        let size = self.matrix().size;
+        let size = self.matrix.size;
 
         // Info surrounding the top left finder.
         let mut iter = bv.iter();
         for x in 0..8 {
             // Avoid timing pattern.
             if x == 6 { continue; }
-            self.matrix().set_fun(x, 8, iter.next().unwrap());
+            self.matrix.set_fun(x, 8, iter.next().unwrap());
         }
         for y in (0..9).rev() {
             // Avoid timing pattern.
             if y == 6 { continue; }
-            self.matrix().set_fun(8, y, iter.next().unwrap());
+            self.matrix.set_fun(8, y, iter.next().unwrap());
         }
         assert_eq!(iter.next(), None);
 
         // Half to the right of the bottom left finder.
         iter = bv.iter();
         for y in (size - 7..size).rev() {
-            self.matrix().set_fun(8, y, iter.next().unwrap());
+            self.matrix.set_fun(8, y, iter.next().unwrap());
         }
         // Rest bottom of the top left finder.
         for x in (size - 8)..size {
-            self.matrix().set_fun(x, 8, iter.next().unwrap());
+            self.matrix.set_fun(x, 8, iter.next().unwrap());
         }
         assert_eq!(iter.next(), None);
     }
 
     fn add_version(&mut self, bv: &BitVec) {
         assert_eq!(bv.len(), 18);
-        let size = self.matrix().size;
+        let size = self.matrix.size;
 
         // Bottom left version block.
         let mut iter = bv.iter();
         for x in 0..6 {
             for y in (size - 11)..(size - 8) {
-                self.matrix().set_fun(x, y, iter.next().unwrap());
+                self.matrix.set_fun(x, y, iter.next().unwrap());
             }
         }
         assert_eq!(iter.next(), None);
@@ -328,19 +323,18 @@ impl QrBuilder {
         iter = bv.iter();
         for y in 0..6 {
             for x in (size - 11)..(size - 8) {
-                self.matrix().set_fun(x, y, iter.next().unwrap());
+                self.matrix.set_fun(x, y, iter.next().unwrap());
             }
         }
         assert_eq!(iter.next(), None);
     }
 
     /// Convert matrix to string.
-    // FIXME remove these?
     pub fn to_string(&self) -> String {
-        render::to_string(&self.matrix())
+        render::to_string(&self.matrix)
     }
     pub fn to_dbg_string(&self) -> String {
-        render::to_dbg_string(&self.matrix())
+        render::to_dbg_string(&self.matrix)
     }
 }
 
@@ -428,7 +422,7 @@ mod tests {
 
     #[test]
     fn finders() {
-        let mut builder = QrBuilder::new(&Version::new(1));
+        let mut builder = QrBuilder::new().version(Version::new(1));
         builder.add_finders();
         let expected = "
 #######.?????.#######
@@ -453,15 +447,15 @@ mod tests {
 #.....#.?????????????
 #######.?????????????
 ";
-        println!("{}", builder.to_dbg_string());
+        //println!("{}", builder.to_dbg_string());
         assert_eq!(builder.to_dbg_string(), expected);
     }
 
     #[test]
     fn fun_patterns() {
-        let mut builder = QrBuilder::new(&Version::new(3));
+        let mut builder = QrBuilder::new().version(Version::new(3));
         builder.add_fun_patterns();
-        println!("{}", builder.to_dbg_string());
+        //println!("{}", builder.to_dbg_string());
         let expected = "
 #######.*????????????.#######
 #.....#.*????????????.#.....#
@@ -498,7 +492,7 @@ mod tests {
 
     #[test]
     fn fun_patterns_large() {
-        let mut builder = QrBuilder::new(&Version::new(9));
+        let mut builder = QrBuilder::new().version(Version::new(9));
         builder.add_fun_patterns();
         //println!("{}", builder.to_dbg_string());
         let expected = "
@@ -561,7 +555,7 @@ mod tests {
 
     #[test]
     fn add_raw_data() {
-        let mut builder = QrBuilder::new(&Version::new(2));
+        let mut builder = QrBuilder::new().version(Version::new(2));
         builder.add_fun_patterns();
         let mut bv: BitVec = BitVec::new();
         for i in 0..359 {
@@ -602,7 +596,7 @@ X-X-X-#X-X-X-X-X#####-X-X
 
     #[test]
     fn add_data() {
-        let mut builder = QrBuilder::new(&Version::new(1));
+        let mut builder = QrBuilder::new().version(Version::new(1));
         builder.add_fun_patterns();
         builder.add_data("HELLO WORLD", &ECLevel::Q);
         //println!("{}", builder.to_dbg_string());
@@ -634,7 +628,7 @@ X--XXX#XXX--X----XX-X
 
     #[test]
     fn format_info() {
-        let mut builder = QrBuilder::new(&Version::new(1));
+        let mut builder = QrBuilder::new().version(Version::new(1));
         // Mask 6, ECLevel Q
         builder.add_format(&bitvec![0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0]);
         let expected = "
@@ -667,7 +661,7 @@ X--XXX#XXX--X----XX-X
     #[test]
     fn hello_world() {
         // Builds a final QR code which should be scannable.
-        let mut builder = QrBuilder::new(&Version::new(1));
+        let mut builder = QrBuilder::new().version(Version::new(1));
         builder.add_all("HELLO WORLD", &ECLevel::Q);
         let expected = "
 #######..--X-.#######

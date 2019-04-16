@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn apply_mask() {
-        let mut builder = QrBuilder::new(&Version::new(1));
+        let mut builder = QrBuilder::new().version(Version::new(1));
         builder.add_fun_patterns();
         builder.add_raw_data(&bitvec![1; 208]);
         builder.mask_with(0);
@@ -239,7 +239,7 @@ X-X-X-.-X-X-X-X-X-X-X
 
     #[test]
     fn mask_evaluation() {
-        let mut builder = QrBuilder::new(&Version::new(1));
+        let mut builder = QrBuilder::new().version(Version::new(1));
         builder.add_fun_patterns();
         builder.add_data("HELLO WORLD", &ECLevel::Q);
         assert_eq!(evaluate_5_in_line(&builder.matrix), 216);
