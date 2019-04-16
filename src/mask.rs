@@ -4,12 +4,37 @@ use bitvec::*;
 use std::cmp;
 use lazy_static::lazy_static;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Mask(pub usize);
+
+impl Mask {
+    pub fn new(v: usize) -> Mask {
+        assert!(v <= 7);
+        Mask(v)
+    }
+
+    fn fun(&self) -> Box<Fn(usize, usize) -> bool> {
+        match self.0 {
+            0 => Box::new(move |x, y| (x + y) % 2 == 0),
+            1 => Box::new(move |_, y| y % 2 ==0),
+            2 => Box::new(move |x, _| x % 3 == 0),
+            3 => Box::new(move |x, y| (x + y) % 3 == 0),
+            4 => Box::new(move |x, y| ((y / 2) + (x / 3)) % 2 == 0),
+            5 => Box::new(move |x, y| (x * y) % 2 + (x * y) % 3 == 0),
+            6 => Box::new(move |x, y| ((x * y) % 2 + (x * y) % 3) % 2 == 0),
+            7 => Box::new(move |x, y| ((x + y) % 2 + (x * y) % 3) % 2 == 0),
+            _ => panic!("Unsupported mask: {:?}", self.0),
+        }
+    }
+}
+
 /// Evaluates masks.
 /// Returns the mask with the lowest score and a matrix with the mask applied.
-pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
+pub fn mask(matrix: &Matrix) -> (Mask, Matrix) {
     let mut min_score = u16::max_value();
     let mut res = None;
-    for mask in 0..8 {
+    for v in 0..8 {
+        let mask = Mask::new(v);
         let masked = apply_mask(mask, matrix);
         let score = evaluate(&masked);
         if score < min_score {
@@ -21,8 +46,8 @@ pub fn mask(matrix: &Matrix) -> (usize, Matrix) {
 }
 
 /// Apply a mask of a specific type to a matrix.
-pub fn apply_mask(mask: usize, matrix: &Matrix) -> Matrix {
-    apply_mask_fun(mask_fun(mask), matrix)
+pub fn apply_mask(mask: Mask, matrix: &Matrix) -> Matrix {
+    apply_mask_fun(mask.fun(), matrix)
 }
 
 /// Evaluate the mask score of a matrix.
@@ -170,20 +195,6 @@ fn evaluate_bw(matrix: &Matrix) -> u16 {
     cmp::min(a, b) as u16
 }
 
-fn mask_fun(mask: usize) -> Box<Fn(usize, usize) -> bool> {
-    match mask {
-        0 => Box::new(move |x, y| (x + y) % 2 == 0),
-        1 => Box::new(move |_, y| y % 2 ==0),
-        2 => Box::new(move |x, _| x % 3 == 0),
-        3 => Box::new(move |x, y| (x + y) % 3 == 0),
-        4 => Box::new(move |x, y| ((y / 2) + (x / 3)) % 2 == 0),
-        5 => Box::new(move |x, y| (x * y) % 2 + (x * y) % 3 == 0),
-        6 => Box::new(move |x, y| ((x * y) % 2 + (x * y) % 3) % 2 == 0),
-        7 => Box::new(move |x, y| ((x + y) % 2 + (x * y) % 3) % 2 == 0),
-        _ => panic!("Unsupported mask: {}", mask),
-    }
-}
-
 fn apply_mask_fun(f: Box<Fn(usize, usize) -> bool>, matrix: &Matrix) -> Matrix {
     let mut res = matrix.clone();
     for y in 0..res.size {
@@ -208,7 +219,7 @@ mod tests {
         let mut builder = QrBuilder::new().version(Version::new(1));
         builder.add_fun_patterns();
         builder.add_raw_data(&bitvec![1; 208]);
-        builder.mask_with(0);
+        builder.mask_with(Mask::new(0));
 
         let expected = "
 #######.*X-X-.#######

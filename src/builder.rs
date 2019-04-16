@@ -2,12 +2,13 @@ use crate::data;
 use crate::ec::ECLevel;
 use crate::ec;
 use crate::info;
+use crate::mask::Mask;
 use crate::mask;
-use crate::mode::Mode;
 use crate::matrix::{Matrix, Module};
+use crate::mode::Mode;
+use crate::qr::Qr;
 use crate::render;
 use crate::version::Version;
-use crate::qr::Qr;
 
 use bitvec::*;
 
@@ -15,7 +16,7 @@ use bitvec::*;
 pub struct QrBuilder {
     // Settings during build.
     pub version: Option<Version>,
-    pub mask: Option<usize>,
+    pub mask: Option<Mask>,
     pub ecl: ECLevel,
     pub mode: Option<Mode>,
 
@@ -56,8 +57,7 @@ impl QrBuilder {
     }
 
     /// Set mask to use. If not set the best mask will be chosen according to the QR spec.
-    pub fn mask(mut self, mask: usize) -> Self {
-        assert!(mask <= 7);
+    pub fn mask(mut self, mask: Mask) -> Self {
         self.mask = Some(mask);
         self
     }
@@ -164,8 +164,7 @@ impl QrBuilder {
     }
 
     /// Mask using a specific mask.
-    pub fn mask_with(&mut self, mask: usize) {
-        assert!(mask <= 7);
+    pub fn mask_with(&mut self, mask: Mask) {
         self.mask = Some(mask);
         self.matrix = mask::apply_mask(mask, &self.matrix);
     }
@@ -745,12 +744,12 @@ XX-XXX#XXXX-XXX-XXXXX
     fn config() {
         let mut builder = QrBuilder::new()
             .ecl(ECLevel::L)
-            .mask(7)
+            .mask(Mask::new(7))
             .mode(Mode::Byte);
         builder.add_all("HELLO WORLD").unwrap();
         //println!("{}", builder.to_dbg_string());
         assert_eq!(builder.version, Some(Version::new(1)));
-        assert_eq!(builder.mask, Some(7));
+        assert_eq!(builder.mask, Some(Mask::new(7)));
         assert_eq!(builder.mode, Some(Mode::Byte));
         assert_eq!(builder.ecl, ECLevel::L);
     }

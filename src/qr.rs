@@ -1,6 +1,7 @@
 use crate::version::Version;
 use crate::ec::ECLevel;
 use crate::mode::Mode;
+use crate::mask::Mask;
 use crate::matrix::Matrix;
 use crate::builder::*;
 
@@ -20,7 +21,7 @@ pub struct Qr {
     pub matrix: Matrix,
 
     /// The applied mask, 0 to 7.
-    pub mask: usize,
+    pub mask: Mask,
 }
 
 impl Qr {

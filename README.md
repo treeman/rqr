@@ -14,11 +14,7 @@ Minor improvements suggestions:
 
 # TODO
 
-* Qr API, hide builder.
-* Calculate minimal version
 * Create CLI
-* Calculate the minimal applicable version
-  Move it after encoding data? To avoid having to include a big table.
 * Add doc comments
 * Instead of `from_str` methods implement into trait?
 

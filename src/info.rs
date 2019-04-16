@@ -1,6 +1,7 @@
 use crate::version::Version;
 use crate::ec::ECLevel;
 use crate::data;
+use crate::mask::Mask;
 
 use bitvec::*;
 
@@ -32,8 +33,8 @@ pub fn block_ec_count(v: &Version, ecl: &ECLevel) -> usize {
 }
 
 /// Returns the format BitVec representation to be embedded.
-pub fn format_info(ecl: &ECLevel, mask: usize) -> BitVec {
-    let x = FORMAT_INFO[mask][*ecl as usize];
+pub fn format_info(ecl: &ECLevel, mask: Mask) -> BitVec {
+    let x = FORMAT_INFO[mask.0][*ecl as usize];
     let mut bv = BitVec::with_capacity(15);
     data::append(&mut bv, x as u32, 15);
     bv
@@ -73,7 +74,7 @@ mod tests {
 
     #[test]
     fn info() {
-        assert_eq!(format_info(&ECLevel::L, 4),
+        assert_eq!(format_info(&ECLevel::L, Mask::new(4)),
                    bitvec![1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1]);
         assert_eq!(version_info(&Version::new(6)), None);
         assert_eq!(version_info(&Version::new(7)),
