@@ -13,7 +13,7 @@ pub enum ECLevel {
 }
 
 impl ECLevel {
-    /// Returns the bit encoding.
+    /// Returns the bit encoding. It is not the same as the enum order.
     pub fn to_bitvec(&self) -> BitVec {
         match self {
             ECLevel::L => bitvec![0, 1],
@@ -25,7 +25,7 @@ impl ECLevel {
 }
 
 /// Add error correction codewords to data.
-pub fn add(data: BitVec, v: &Version, ecl: &ECLevel) -> BitVec {
+pub fn add(data: BitVec, v: Version, ecl: ECLevel) -> BitVec {
     let layout = info::group_block_count(v, ecl);
     assert_eq!(data.len() / 8, layout.iter().sum());
 
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn ec_tutorial_example() {
-        let ec_count = info::block_ec_count(&Version::new(1), &ECLevel::M);
+        let ec_count = info::block_ec_count(Version::new(1), ECLevel::M);
         assert_eq!(ec_count, 10);
 
         // HELLO WORLD as 1-M code
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn group_tutorial_example() {
-        let layout = info::group_block_count(&Version::new(5), &ECLevel::Q);
+        let layout = info::group_block_count(Version::new(5), ECLevel::Q);
         assert_eq!(layout, vec![15, 15, 16, 16]);
 
         let bv: BitVec = vec![
@@ -221,7 +221,7 @@ mod tests {
               110101010010011011110001000100001010000000100101011010100011
               011011001000001110100001101000111111000000100000011011110111
               10001100000010110010001001111000010110001101111011000000000");
-        assert_eq!(add(bv, &Version::new(5), &ECLevel::Q).len(),
+        assert_eq!(add(bv, Version::new(5), ECLevel::Q).len(),
                    expected.len());
     }
 

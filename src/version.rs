@@ -14,10 +14,10 @@ impl Version {
 
     /// Calculate the minimal required version to hold the string
     /// in the given mode with the required error correction level.
-    pub fn minimal(s: &str, mode: &Mode, e: &ECLevel) -> Option<Version> {
+    pub fn minimal(s: &str, mode: Mode, e: ECLevel) -> Option<Version> {
         let len = s.len();
         for v in 0..40 {
-            let capacity = CAPACITIES[v][*e as usize][*mode as usize];
+            let capacity = CAPACITIES[v][e as usize][mode as usize];
             if len <= capacity {
                 return Some(Version(v + 1));
             }
@@ -26,8 +26,8 @@ impl Version {
     }
 
     /// Return the data capacity.
-    pub fn capacity(&self, mode: &Mode, e: &ECLevel) -> usize {
-        CAPACITIES[self.index()][*e as usize][*mode as usize]
+    pub fn capacity(&self, mode: Mode, e: ECLevel) -> usize {
+        CAPACITIES[self.index()][e as usize][mode as usize]
     }
 
     /// Return the size of the QR code.
@@ -36,7 +36,7 @@ impl Version {
     }
 
     /// Returns the required len of the char count bit representation.
-    pub fn char_count_len(&self, mode: &Mode) -> usize {
+    pub fn char_count_len(&self, mode: Mode) -> usize {
         if self.0 >= 1 && self.0 <= 9 {
             match mode {
                 Mode::Numeric => 10,
@@ -84,15 +84,15 @@ mod tests {
     fn version() {
         assert_eq!(Version::new(32).size(), 145);
 
-        assert_eq!(Version::new(1).char_count_len(&Mode::Numeric), 10);
-        assert_eq!(Version::new(40).char_count_len(&Mode::Byte), 16);
+        assert_eq!(Version::new(1).char_count_len(Mode::Numeric), 10);
+        assert_eq!(Version::new(40).char_count_len(Mode::Byte), 16);
     }
 
     #[test]
     fn minimal_version() {
-        assert_eq!(Version::minimal("HELLO WORLD", &Mode::Alphanumeric, &ECLevel::Q),
+        assert_eq!(Version::minimal("HELLO WORLD", Mode::Alphanumeric, ECLevel::Q),
                    Some(Version::new(1)));
-        assert_eq!(Version::minimal("HELLO THERE WORLD", &Mode::Alphanumeric, &ECLevel::Q),
+        assert_eq!(Version::minimal("HELLO THERE WORLD", Mode::Alphanumeric, ECLevel::Q),
                    Some(Version::new(2)));
 
         // Test max possible capacity.
@@ -100,11 +100,11 @@ mod tests {
         for _ in 0..2953 {
             long.push('X');
         }
-        assert_eq!(Version::minimal(&long, &Mode::Byte, &ECLevel::L),
+        assert_eq!(Version::minimal(&long, Mode::Byte, ECLevel::L),
                    Some(Version::new(40)));
         // Go over largest capacity.
         long.push('X');
-        assert_eq!(Version::minimal(&long, &Mode::Byte, &ECLevel::L),
+        assert_eq!(Version::minimal(&long, Mode::Byte, ECLevel::L),
                    None)
     }
 }

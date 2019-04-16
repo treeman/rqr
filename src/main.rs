@@ -5,6 +5,8 @@ use rqr::version::Version;
 use rqr::ec::ECLevel;
 use rqr::render::*;
 use rqr::qr::Qr;
+use rqr::mode::Mode;
+use rqr::mask::Mask;
 
 fn main() {
     //let mut builder = QrBuilder::new()
@@ -28,11 +30,14 @@ fn main() {
         //.render(&builder.matrix);
 
     // TODO this should be an interface.
-    //let qr: Qr = QrBuilder::new()
-        //.ecl(&ECLevel::Q)
-        //.version(&Version::new(1))
-        //.mask(2)
-        //.mode(Mode::Byte)
-        //.into();
+    let qr2: Qr = QrBuilder::new()
+        .ecl(ECLevel::L)
+        .version(Version::new(3))
+        .mask(Mask::new(2))
+        .mode(Mode::Byte)
+        .into("HELLO WORLD")
+        .unwrap();
+    let s = StringRenderer::new().render(&qr2);
+    println!("{}", s);
 }
 

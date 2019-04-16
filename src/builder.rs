@@ -126,11 +126,11 @@ impl QrBuilder {
 
         let v = data::encode_with_mode(
             s,
-            &mode,
-            &version,
-            &ecl
+            mode,
+            version,
+            ecl
         );
-        let v = ec::add(v, &self.version.unwrap(), &self.ecl);
+        let v = ec::add(v, self.version.unwrap(), self.ecl);
         self.add_raw_data(&v);
 
         Ok(())
@@ -178,13 +178,13 @@ impl QrBuilder {
     /// Add format info.
     pub fn add_format_info(&mut self) {
         // Hard assumption that we have necessary data.
-        let format = info::format_info(&self.ecl, self.mask.unwrap());
+        let format = info::format_info(self.ecl, self.mask.unwrap());
         self.add_format(&format);
     }
 
     /// Add version info.
     pub fn add_version_info(&mut self) {
-        if let Some(v) = info::version_info(&self.version.unwrap()) {
+        if let Some(v) = info::version_info(self.version.unwrap()) {
             self.add_version(&v);
         }
     }
@@ -210,7 +210,7 @@ impl QrBuilder {
 
         // Try to calculate a minimal version if nothing is provided.
         if self.version.is_none() {
-            self.version = Version::minimal(s, &self.mode.unwrap(), &self.ecl);
+            self.version = Version::minimal(s, self.mode.unwrap(), self.ecl);
         }
         // We can either fail to find a minimum or a faulty version was provided before.
         if self.version.is_none() {

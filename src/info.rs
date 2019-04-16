@@ -6,20 +6,20 @@ use crate::mask::Mask;
 use bitvec::*;
 
 /// Returns the total codewords for a given version end error correction.
-pub fn total_codewords(v: &Version, ecl: &ECLevel) -> usize {
+pub fn total_codewords(v: Version, ecl: ECLevel) -> usize {
     let d = block_data(v, ecl);
     d.1 * d.2 + d.3 * d.4
 }
 
 /// Returns the total data bits possible for a given version and error correction.
-pub fn total_bits(v: &Version, ecl: &ECLevel) -> usize {
+pub fn total_bits(v: Version, ecl: ECLevel) -> usize {
     8 * total_codewords(v, ecl)
 }
 
 /// Returns a vector of codewords counts per block.
 /// The length specifies how many blocks there are and each element
 /// how many codewords exist in that block.
-pub fn group_block_count(v: &Version, ecl: &ECLevel) -> Vec<usize> {
+pub fn group_block_count(v: Version, ecl: ECLevel) -> Vec<usize> {
     let data = block_data(v, ecl);
     let mut v = Vec::new();
     v.extend((0..data.1).map(|_| data.2));
@@ -28,13 +28,13 @@ pub fn group_block_count(v: &Version, ecl: &ECLevel) -> Vec<usize> {
 }
 
 /// Returns error correction codewords per block.
-pub fn block_ec_count(v: &Version, ecl: &ECLevel) -> usize {
+pub fn block_ec_count(v: Version, ecl: ECLevel) -> usize {
     block_data(v, ecl).0
 }
 
 /// Returns the format BitVec representation to be embedded.
-pub fn format_info(ecl: &ECLevel, mask: Mask) -> BitVec {
-    let x = FORMAT_INFO[mask.0][*ecl as usize];
+pub fn format_info(ecl: ECLevel, mask: Mask) -> BitVec {
+    let x = FORMAT_INFO[mask.0][ecl as usize];
     let mut bv = BitVec::with_capacity(15);
     data::append(&mut bv, x as u32, 15);
     bv
@@ -42,7 +42,7 @@ pub fn format_info(ecl: &ECLevel, mask: Mask) -> BitVec {
 
 /// Returns the version BitVec representation to be embedded.
 /// Valid for larger versions only.
-pub fn version_info(v: &Version) -> Option<BitVec> {
+pub fn version_info(v: Version) -> Option<BitVec> {
     if v.extra_version_areas() {
         println!("{}", v.0 - 7);
         let x = VERSION_INFO[v.0 - 7];
@@ -54,8 +54,8 @@ pub fn version_info(v: &Version) -> Option<BitVec> {
     }
 }
 
-fn block_data(v: &Version, ecl: &ECLevel) -> (usize, usize, usize, usize, usize) {
-    BLOCK_INFO[v.index()][*ecl as usize]
+fn block_data(v: Version, ecl: ECLevel) -> (usize, usize, usize, usize, usize) {
+    BLOCK_INFO[v.index()][ecl as usize]
 }
 
 #[cfg(test)]
@@ -64,20 +64,20 @@ mod tests {
 
     #[test]
     fn data() {
-        assert_eq!(total_codewords(&Version::new(1), &ECLevel::Q), 13);
-        assert_eq!(total_bits(&Version::new(1), &ECLevel::Q), 104);
-        assert_eq!(group_block_count(&Version::new(1), &ECLevel::Q),
+        assert_eq!(total_codewords(Version::new(1), ECLevel::Q), 13);
+        assert_eq!(total_bits(Version::new(1), ECLevel::Q), 104);
+        assert_eq!(group_block_count(Version::new(1), ECLevel::Q),
                    vec![13]);
-        assert_eq!(group_block_count(&Version::new(5), &ECLevel::Q),
+        assert_eq!(group_block_count(Version::new(5), ECLevel::Q),
                    vec![15, 15, 16, 16]);
     }
 
     #[test]
     fn info() {
-        assert_eq!(format_info(&ECLevel::L, Mask::new(4)),
+        assert_eq!(format_info(ECLevel::L, Mask::new(4)),
                    bitvec![1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1]);
-        assert_eq!(version_info(&Version::new(6)), None);
-        assert_eq!(version_info(&Version::new(7)),
+        assert_eq!(version_info(Version::new(6)), None);
+        assert_eq!(version_info(Version::new(7)),
                    Some(bitvec![0, 0, 0, 1, 1, 1, 1, 1, 0,
                                 0, 1, 0, 0, 1, 0, 1, 0, 0]));
     }
