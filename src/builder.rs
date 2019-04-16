@@ -21,6 +21,7 @@ pub struct QrBuilder {
     pub mode: Option<Mode>,
 
     // Resulting matrix.
+    //pub matrix: Option<Matrix>,
     pub matrix: Matrix,
 
     // Build status.
@@ -36,13 +37,38 @@ impl QrBuilder {
             version: *v,
             matrix: Matrix::new(v.size()),
             mask: None,
-            ecl: None,
+            ecl: Some(ECLevel::Q),
             mode: None,
             has_fun_patterns: false,
             has_data: false,
             is_masked: false,
             has_info: false,
         }
+    }
+
+    /// Set version. If not set the smallest applicable version will be used.
+    pub fn version(mut self, v: Version) -> Self {
+        self.version = v;
+        self
+    }
+
+    /// Set mask to use. If not set the best mask will be chosen according to the QR spec.
+    pub fn mask(mut self, mask: usize) -> Self {
+        assert!(mask <= 7);
+        self.mask = Some(mask);
+        self
+    }
+
+    /// Set error correction. Will default to ECLevel::Q.
+    pub fn error_correction(mut self, ecl: ECLevel) -> Self {
+        self.ecl = Some(ecl);
+        self
+    }
+
+    /// Set the mode to use, will otherwise be calculated from input.
+    pub fn mode(mut self, mode: Mode) -> Self {
+        self.mode = Some(mode);
+        self
     }
 
     /// Build all elements and generate a QR code.
@@ -66,7 +92,7 @@ impl QrBuilder {
     pub fn add_all(&mut self, s: &str, ecl: &ECLevel) {
         self.add_fun_patterns();
         self.add_data(s, ecl);
-        self.mask();
+        self.mask_data();
         self.add_info();
     }
 
@@ -101,18 +127,27 @@ impl QrBuilder {
         assert_eq!(vi, v.len());
     }
 
-    /// Apply mask.
-    pub fn mask(&mut self) {
+    /// Mask data.
+    pub fn mask_data(&mut self) {
+        if let Some(mask) = self.mask {
+            self.mask_with(mask);
+        } else {
+            self.mask_best();
+        }
+    }
+
+    /// Mask by evaluating available masks and choose the best one.
+    pub fn mask_best(&mut self) {
         let (mask, masked) = mask::mask(&self.matrix);
         self.mask = Some(mask);
         self.matrix = masked;
     }
 
     /// Mask using
-    pub fn mask_with(&mut self, m: usize) {
-        assert!(m <= 7);
-        self.mask = Some(m);
-        self.matrix = mask::apply_mask(m, &self.matrix);
+    pub fn mask_with(&mut self, mask: usize) {
+        assert!(mask <= 7);
+        self.mask = Some(mask);
+        self.matrix = mask::apply_mask(mask, &self.matrix);
     }
 
     /// Add info.
@@ -134,6 +169,19 @@ impl QrBuilder {
             self.add_version(&v);
         }
     }
+
+    // Get the matrix, construct it if it doesn't exist.
+    // Convenience to avoid unwrapping everywhere.
+    //fn matrix(&mut self) -> &mut Matrix {
+        //if let Some(m) = self.matrix {
+            //m
+        //} else {
+            //let matrix = Matrix::new(self.version.size());
+            //self.matrix = Some(matrix);
+            //&mut matrix
+        //}
+    //}
+
 
     fn add_finders(&mut self) {
         let size = self.matrix.size;
@@ -648,6 +696,12 @@ XX-XXX#XXXX-XXX-XXXXX
         //println!("{}", builder.to_dbg_string());
         assert_eq!(builder.to_dbg_string(), expected);
     }
+
+    //#[test]
+    //fn config() {
+        //let mut builder = QrBuilder::new(&Version::new(1));
+        //builder.version(
+    //}
 }
 
 static ALIGNMENT_LOCATIONS: [&[usize]; 40] = [

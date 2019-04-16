@@ -58,7 +58,7 @@ pub struct Matrix {
 }
 
 impl Matrix {
-    /// Create a new matrix, modules initialized to false.
+    /// Create a new matrix, modules initialized to Unknown.
     pub fn new(size: usize) -> Matrix {
         Matrix {
             size: size,
