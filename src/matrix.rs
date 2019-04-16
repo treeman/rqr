@@ -1,15 +1,33 @@
+//! The matrix holds all modules in a QR code.
+//!
+//! They're organized in a 2-dimensional grid but held in
+//! a vector internally.
+//!
+//! The implementation uses assertions heavily to ensure correctness.
+//! If interfacing with the matrix directly take care not to violate
+//! assumptions, like overwriting existing data.
+
 use std::ops::Not;
 
-// Dark modules are true
+/// The type of a module.
+/// Differentiates the different types during construction,
+/// a valid QR code should only hold function and data modules.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Module {
+    /// An unknown module, it hasn't been assigned yet.
     Unknown,
+    /// Reserved module.
+    /// Version and format info uses this to reserve modules before masking.
     Reserved,
+    /// Function module, contains QR code artifacts like finders and timing patterns.
     Function(bool),
+    /// Data module. Contains both data and error codes.
     Data(bool),
 }
 
 impl Module {
+    /// Is the module dark?
+    /// Only makes sense for data or function modules.
     pub fn is_dark(&self) -> bool {
         match self {
             Module::Unknown => false,
@@ -19,6 +37,8 @@ impl Module {
         }
     }
 
+    /// Is the module a function module?
+    /// This includes reserved modules as well.
     pub fn is_fun(&self) -> bool {
         match self {
             Module::Unknown => false,
@@ -27,6 +47,7 @@ impl Module {
         }
     }
 
+    /// Is the module a Data module?
     pub fn is_data(&self) -> bool {
         match self {
             Module::Data(_) => true,
@@ -78,7 +99,7 @@ impl Matrix {
         &self.modules[self.index(x, y)]
     }
 
-    /// Get mut module.
+    /// Get mutable module.
     pub fn get_mut(&mut self, x: usize, y: usize) -> &mut Module {
         let i = self.index(x, y);
         &mut self.modules[i]
@@ -105,6 +126,7 @@ impl Matrix {
     }
 
     /// Assign a function module.
+    /// Fails if the existing module is a Data module.
     pub fn set_fun(&mut self, x: usize, y: usize, v: bool) {
         let m = self.get_mut(x, y);
         assert!(!m.is_data());
@@ -112,6 +134,7 @@ impl Matrix {
     }
 
     /// Assign a data module.
+    /// Fails unless the existing module is Unknown.
     pub fn set_data(&mut self, x: usize, y: usize, v: bool) {
         let m = self.get_mut(x, y);
         assert!(*m == Module::Unknown);
@@ -119,6 +142,7 @@ impl Matrix {
     }
 
     /// Flip a module.
+    /// Fails unless it's a data module.
     pub fn flip(&mut self, x: usize, y: usize) {
         let m = self.get_mut(x, y);
         assert!(m.is_data());

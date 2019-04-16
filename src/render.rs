@@ -1,3 +1,6 @@
+//! Renders the QR code to different outputs.
+//!
+//! Outputs to a string representation and svg are supported.
 use crate::matrix::{Matrix, Module};
 use crate::qr::Qr;
 
@@ -5,6 +8,8 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 use std::u8;
 
+/// A string renderer for converting a QR code into a representation
+/// suitable for text output.
 pub struct StringRenderer {
     light: char,
     dark: char,
@@ -14,6 +19,7 @@ pub struct StringRenderer {
 }
 
 impl StringRenderer {
+    /// Create a new renderer.
     pub fn new() -> Self {
         Self {
             light: '.',
@@ -126,11 +132,8 @@ pub fn to_dbg_string(matrix: &Matrix) -> String {
     res
 }
 
-//pub fn to_svg(matrix: &Matrix) -> String {
-    //SvgRenderer::new().render(matrix)
-//}
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+/// An RGB color implementation.
 pub struct Color {
     pub r: u8,
     pub g: u8,
@@ -138,10 +141,16 @@ pub struct Color {
 }
 
 impl Color {
+    /// Create a new from rgb parts.
     pub fn new(r: u8, g: u8, b: u8) -> Self {
         Self { r, g, b }
     }
 
+    /// Create a new color from a hex input.
+    /// ```
+    /// # use rqr::*;
+    /// let c = Color::hex(0xff3214);
+    /// ```
     pub fn hex(v: u32) -> Self {
         Self {
             r: (v >> 16) as u8,
@@ -150,6 +159,12 @@ impl Color {
         }
     }
 
+    /// Create a new color from a length 4 input hex.
+    /// ```
+    /// # use rqr::*;
+    /// // Short for "#770000"
+    /// let c = Color::from_4_hex("#700");
+    /// ```
     pub fn from_4_hex(s: &str) -> Result<Self, ParseColorError> {
         let chars: Vec<char> = s.chars().collect();
         if chars[0] != '#' {
@@ -165,6 +180,11 @@ impl Color {
         })
     }
 
+    /// Create a new color from a length 7 input hex.
+    /// ```
+    /// # use rqr::*;
+    /// let c = Color::from_7_hex("#3477ff");
+    /// ```
     pub fn from_7_hex(s: &str) -> Result<Self, ParseColorError> {
         if s[0..1] != *"#" {
             return Err(ParseColorError);
@@ -179,12 +199,18 @@ impl Color {
         })
     }
 
+    /// Convert to a hex string.
+    /// ```
+    /// # use rqr::*;
+    /// assert_eq!(Color::hex(0xff7312).to_hex_str(), "#ff7312");
+    /// ```
     pub fn to_hex_str(&self) -> String {
         String::from(format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b))
     }
 }
 
 #[derive(Debug, Copy, Clone)]
+/// An error from trying to parse a Color instance from string.
 pub struct ParseColorError;
 
 impl FromStr for Color {
@@ -205,6 +231,7 @@ impl From <ParseIntError> for ParseColorError {
     }
 }
 
+/// A string renderer for converting a QR code into svg.
 pub struct SvgRenderer {
     light: Color,
     dark: Color,
@@ -214,6 +241,7 @@ pub struct SvgRenderer {
 }
 
 impl SvgRenderer {
+    /// Create a new renderer.
     pub fn new() -> Self {
         Self {
             light: Color::new(255, 255, 255),

@@ -1,13 +1,18 @@
+//! Masking flips data modules with certain patterns.
+
 use crate::matrix::Matrix;
 
 use bitvec::*;
 use std::cmp;
 use lazy_static::lazy_static;
 
+/// A mask, must be inside [0, 7] inclusive.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Mask(pub usize);
 
 impl Mask {
+    /// Create a new mask.
+    /// Fails if larger than 7.
     pub fn new(v: usize) -> Mask {
         assert!(v <= 7);
         Mask(v)

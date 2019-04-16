@@ -1,3 +1,5 @@
+//! Specifies the version of a QR code.
+
 use crate::mode::Mode;
 use crate::ec::ECLevel;
 

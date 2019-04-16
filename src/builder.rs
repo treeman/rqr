@@ -1,3 +1,7 @@
+//! QR code builder.
+//!
+//! Separated from the Qr struct to keep a simple and safe API.
+//! But it's still possible to interface with the builder directly.
 use crate::data;
 use crate::ec::ECLevel;
 use crate::ec;
@@ -14,13 +18,23 @@ use bitvec::*;
 
 /// Builder for a QR code.
 pub struct QrBuilder {
-    // Settings during build.
+    /// Version to use.
+    /// If not set a minimal version will be calculated.
     pub version: Option<Version>,
+    /// Mask to use.
+    /// If not set the optimal mask will be chosen per the QR specification.
     pub mask: Option<Mask>,
+    /// Error correction level to use.
+    /// If not set ECLevel::Q, which recovers 25% of data, will be used.
     pub ecl: ECLevel,
+    /// Encoding mode to use.
+    /// If not set will be inferred from input data.
     pub mode: Option<Mode>,
 
-    // Resulting matrix.
+    /// Resulting matrix.
+    ///
+    /// Note that even though the matrix is not an Option it might still be invalid.
+    /// This to simplify the implementation.
     pub matrix: Matrix,
 }
 
@@ -35,6 +49,7 @@ pub enum Error {
 }
 
 impl QrBuilder {
+    /// Create a new builder.
     pub fn new() -> QrBuilder {
         QrBuilder {
             version: None,
@@ -42,8 +57,6 @@ impl QrBuilder {
             ecl: ECLevel::Q,
             mode: None,
 
-            // Matrix will be rebuilt when version changes.
-            // Easier implementation wise compared to if Matrix is an Option.
             matrix: Matrix::new(0),
         }
     }

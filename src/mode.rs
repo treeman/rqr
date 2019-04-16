@@ -1,3 +1,5 @@
+//! Encoding modes for a QR code.
+
 use regex::Regex;
 use bitvec::*;
 use lazy_static::lazy_static;
@@ -5,9 +7,15 @@ use lazy_static::lazy_static;
 /// Encoding modes.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mode {
-    Numeric = 0, // 0..9
-    Alphanumeric, // 0..9, A-Z and $%*+-./: and space
-    Byte, // ISO-8859-1 character set
+    /// Numeric mode can encode numbers, 0 to 9.
+    Numeric = 0,
+    /// Alphanumeric mode can encode numbers, A-Z (only uppercase),
+    /// the characters $%*+-./: and space.
+    Alphanumeric,
+    /// Byte mode supports the ISO-8859-1 character set.
+    /// It is possible to use this mode to encode unicode,
+    /// but it depends heavily on the reader if it's supported or not.
+    Byte,
     //ECI, // specifies the character set directly (like UTF-8)
     //Kanji, // more efficient storage than ECI
 }

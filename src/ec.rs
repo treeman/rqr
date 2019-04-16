@@ -1,15 +1,21 @@
+//! Error correction calculations.
+
 use crate::version::Version;
 use crate::info;
 
 use bitvec::*;
 
-/// Error correction level
+/// Error correction level.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ECLevel {
-    L = 0, // Recovers 7% of data
-    M, // Recovers 15% of data
-    Q, // Recovers 25% of data
-    H, // Recovers 30% of data
+    /// Recovers 7% of data
+    L = 0,
+    /// Recovers 15% of data
+    M,
+    /// Recovers 25% of data
+    Q,
+    /// Recovers 30% of data
+    H,
 }
 
 impl ECLevel {
@@ -25,6 +31,9 @@ impl ECLevel {
 }
 
 /// Add error correction codewords to data.
+///
+/// This includes both the data and the error correction codewords,
+/// interleaved if necessary.
 pub fn add(data: BitVec, v: Version, ecl: ECLevel) -> BitVec {
     let layout = info::group_block_count(v, ecl);
     assert_eq!(data.len() / 8, layout.iter().sum());

@@ -1,4 +1,4 @@
-use rqr::{Qr, StringRenderer, ECLevel, Version};
+use rqr::{Qr, StringRenderer, ECLevel};
 
 fn main() {
     // FIXME there's some error here with ECLevel::M

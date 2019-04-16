@@ -1,3 +1,5 @@
+//! Data encoding.
+
 use crate::mode::Mode;
 use crate::ec::ECLevel;
 use crate::version::Version;

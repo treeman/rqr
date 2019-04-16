@@ -1,3 +1,5 @@
+//! Provides a simple and safe API.
+
 use crate::version::Version;
 use crate::ec::ECLevel;
 use crate::mode::Mode;
@@ -6,6 +8,9 @@ use crate::matrix::Matrix;
 use crate::builder::*;
 
 /// The QR code.
+///
+/// Encapsulates a matrix, the 2D-grid containing the QR modules
+/// and some information about the QR code.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Qr {
     /// Version of the QR code.

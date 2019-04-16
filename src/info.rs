@@ -1,3 +1,5 @@
+//! Contains various QR specific encoding info.
+
 use crate::version::Version;
 use crate::ec::ECLevel;
 use crate::data;

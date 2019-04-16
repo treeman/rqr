@@ -90,7 +90,7 @@ XXXXXXXXXXXXXX    XX  XX              XX
 An svg file can be produced with:
 
 ```rust
-use rqr::{Qr, SvgRenderer, Color};
+use rqr::{Qr, SvgRenderer, Color, ECLevel};
 
 fn main() {
     let qr = Qr::with_ecl("HELLO WORLD", ECLevel::Q).unwrap();
